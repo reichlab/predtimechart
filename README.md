@@ -48,7 +48,7 @@ In your HTML file, load the required CSS and JavaScript files:
 ```html
 <script type="module">
     // import the module's entry point (the `App` object)
-    import App from 'https://cdn.jsdelivr.net/gh/reichlab/predtimechart@1.2.0/predtimechart.js';
+    import App from 'https://cdn.jsdelivr.net/gh/reichlab/predtimechart@2.0.9/dist/predtimechart.js';
 
     // set up _fetchData, _calcUemForecasts (optional), and options
     function _fetchData(isForecast, targetKey, taskIDs, referenceDate) { ... }
