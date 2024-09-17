@@ -495,20 +495,22 @@ const App = {
         newUrl.searchParams.append("target_var", this.state.selected_target_var);
 
         const plotyDiv = document.getElementById('ploty_div');
-        const currXAxisRange = plotyDiv.layout.xaxis.range;
-        const currYAxisRange = plotyDiv.layout.yaxis.range;
-        const isXAxisRangeDefault = ((currXAxisRange.length === 2) && (currXAxisRange[0] === -1) && (currXAxisRange[1] === 6));
-        const isYAxisRangeDefault = ((currYAxisRange.length === 2) && (currYAxisRange[0] === -1) && (currYAxisRange[1] === 4));
-        if (!isXAxisRangeDefault) {
-            plotyDiv.layout.xaxis.range.forEach(xRangeDateTimeStr => {  // ex: "2022-02-03 18:17:12.8268" or "2022-02-03"
-                const xRangeDate = xRangeDateTimeStr.slice(0, 10);
-                newUrl.searchParams.append("xaxis_range", xRangeDate);
-            });
-        }
-        if (!isYAxisRangeDefault) {
-            plotyDiv.layout.yaxis.range.forEach(yRangeValue => {
-                newUrl.searchParams.append("yaxis_range", yRangeValue);
-            });
+        if (plotyDiv.data.length !== 0) {  // we have data to plot. o/w plotyDiv.layout.* is undefined
+            const currXAxisRange = plotyDiv.layout.xaxis.range;
+            const currYAxisRange = plotyDiv.layout.yaxis.range;
+            const isXAxisRangeDefault = ((currXAxisRange.length === 2) && (currXAxisRange[0] === -1) && (currXAxisRange[1] === 6));
+            const isYAxisRangeDefault = ((currYAxisRange.length === 2) && (currYAxisRange[0] === -1) && (currYAxisRange[1] === 4));
+            if (!isXAxisRangeDefault) {
+                plotyDiv.layout.xaxis.range.forEach(xRangeDateTimeStr => {  // ex: "2022-02-03 18:17:12.8268" or "2022-02-03"
+                    const xRangeDate = xRangeDateTimeStr.slice(0, 10);
+                    newUrl.searchParams.append("xaxis_range", xRangeDate);
+                });
+            }
+            if (!isYAxisRangeDefault) {
+                plotyDiv.layout.yaxis.range.forEach(yRangeValue => {
+                    newUrl.searchParams.append("yaxis_range", yRangeValue);
+                });
+            }
         }
 
         this.state.selected_models.forEach(model => {
@@ -1140,32 +1142,38 @@ const App = {
         const data = this.getPlotlyData();
         let layout = this.getPlotlyLayout();
         if (data.length === 0) {
-            layout = {title: {text: 'No Visualization Data Found'}};
+            layout = {title: {text: `No Visualization Data Found for ${this.state.selected_as_of_date}`}};
         }
 
-        // before updating the plot we store the xaxis and yaxis ranges so we can relayout using them if need be.
+        // before updating the plot we store the xaxis and yaxis ranges so that we can relayout using them if need be.
         // NB: the default xaxis.range seems to be [-1, 6] when updating for the first time (yaxis.range = [-1, 4]).
         // there might be a better way to determine this.
-        const currXAxisRange = plotyDiv.layout.xaxis.range;
-        const currYAxisRange = plotyDiv.layout.yaxis.range;
-        const isXAxisRangeDefault = ((currXAxisRange.length === 2) && (currXAxisRange[0] === -1) && (currXAxisRange[1] === 6));
-        const isYAxisRangeDefault = ((currYAxisRange.length === 2) && (currYAxisRange[0] === -1) && (currYAxisRange[1] === 4));
-        Plotly.react(plotyDiv, data, layout);
-
-        if (!isXAxisRangeDefault) {
-            Plotly.relayout(plotyDiv, 'xaxis.range', currXAxisRange);
-        } else if (this.state.initial_xaxis_range != null) {
-            Plotly.relayout(plotyDiv, 'xaxis.range', this.state.initial_xaxis_range);
+        let currXAxisRange;
+        let currYAxisRange;
+        let isXAxisRangeDefault;
+        let isYAxisRangeDefault;
+        if (plotyDiv.data.length !== 0) {  // we have data to plot. o/w plotyDiv.layout.* is undefined
+            currXAxisRange = plotyDiv.layout.xaxis.range;
+            currYAxisRange = plotyDiv.layout.yaxis.range;
+            isXAxisRangeDefault = ((currXAxisRange.length === 2) && (currXAxisRange[0] === -1) && (currXAxisRange[1] === 6));
+            isYAxisRangeDefault = ((currYAxisRange.length === 2) && (currYAxisRange[0] === -1) && (currYAxisRange[1] === 4));
         }
+        Plotly.react(plotyDiv, data, layout);
+        if (plotyDiv.data.length !== 0) {  // we have data to plot. o/w plotyDiv.layout.* is undefined
+            if (!isXAxisRangeDefault) {
+                Plotly.relayout(plotyDiv, 'xaxis.range', currXAxisRange);
+            } else if (this.state.initial_xaxis_range != null) {
+                Plotly.relayout(plotyDiv, 'xaxis.range', this.state.initial_xaxis_range);
+            }
 
-        if (!isResetYLimit) {
-            if (!isYAxisRangeDefault) {
-                Plotly.relayout(plotyDiv, 'yaxis.range', currYAxisRange);
-            } else if (this.state.initial_yaxis_range != null) {
-                Plotly.relayout(plotyDiv, 'yaxis.range', this.state.initial_yaxis_range);
+            if (!isResetYLimit) {
+                if (!isYAxisRangeDefault) {
+                    Plotly.relayout(plotyDiv, 'yaxis.range', currYAxisRange);
+                } else if (this.state.initial_yaxis_range != null) {
+                    Plotly.relayout(plotyDiv, 'yaxis.range', this.state.initial_yaxis_range);
+                }
             }
         }
-
         this.initializeDateRangePicker();  // b/c jquery binding is apparently lost with any Plotly.*() call
     },
     getPlotlyLayout() {
