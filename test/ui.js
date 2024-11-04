@@ -101,3 +101,25 @@ test('selectedTaskIDs() and selectedTaskIDValues() are correct', assert => {
     // test selectedTaskIDValues()
     assert.deepEqual(App.selectedTaskIDValues(), {"scenario_id": "1", "location": "48"});
 });
+
+
+//
+// optional disclaimer tests
+//
+
+QUnit.module('optional disclaimer');
+
+test('initialize() creates .forecastViz_disclaimer <P> only if disclaimer present', assert => {
+    // case 1: disclaimer is present
+    let optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    let foundEles = document.getElementsByClassName('forecastViz_disclaimer');
+    assert.equal(foundEles.length, 1);
+
+    // case 1: disclaimer is missing
+    optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    delete optionsCopy['disclaimer'];
+    App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    foundEles = document.getElementsByClassName('forecastViz_disclaimer');
+    assert.equal(foundEles.length, 0);
+});

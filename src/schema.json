@@ -137,6 +137,5 @@
       "additionalProperties": false
     }
   },
-  "required": ["available_as_ofs", "current_date", "disclaimer", "initial_as_of", "initial_checked_models",
-    "initial_interval", "initial_target_var", "initial_task_ids", "intervals", "models", "target_variables",
-    "task_ids"]}
+  "required": ["available_as_ofs", "current_date", "initial_as_of", "initial_checked_models", "initial_interval",
+    "initial_target_var", "initial_task_ids", "intervals", "models", "target_variables", "task_ids"]}
