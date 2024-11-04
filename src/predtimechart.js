@@ -104,7 +104,7 @@ function _setSelectedTruths() {
  * @param taskIdsKeys - array of options.task_ids keys. used to create task rows - one per task ID
  * @private
  */
-function _createUIElements($componentDiv, isUemEnabled, taskIdsKeys, isDislaimerPresent) {
+function _createUIElements($componentDiv, isUemEnabled, taskIdsKeys, isDisclaimerPresent) {
     //
     // helper functions for creating for rows
     //
@@ -195,7 +195,7 @@ function _createUIElements($componentDiv, isUemEnabled, taskIdsKeys, isDislaimer
         '    </div>\n' +
         '</div>'
     );
-    if (isDislaimerPresent) {
+    if (isDisclaimerPresent) {
         $vizDiv.append($('<p class="forecastViz_disclaimer"><b><span id="disclaimer">(disclaimer here)</span></b></p>'));
     }
     $vizDiv.append($('<div id="ploty_div" style="width: 100%; height: 72vh; position: relative;"></div>'));
@@ -431,9 +431,9 @@ const App = {
 
         console.debug('initialize(): initializing UI');
         const $componentDiv = $(componentDivEle);
-        const isDislaimerPresent = options.hasOwnProperty('disclaimer');
-        _createUIElements($componentDiv, this.isUemEnabled, Object.keys(this.state.task_ids), isDislaimerPresent);
-        this.initializeUI(options['initial_task_ids'], isDislaimerPresent);
+        const isDisclaimerPresent = options.hasOwnProperty('disclaimer');
+        _createUIElements($componentDiv, this.isUemEnabled, Object.keys(this.state.task_ids), isDisclaimerPresent);
+        this.initializeUI(options['initial_task_ids'], isDisclaimerPresent);
 
         // wire up UI controls (event handlers)
         this.addEventHandlers();
@@ -530,7 +530,7 @@ const App = {
             window.history.replaceState(newUrl.toString(), '', newUrl);
         }
     },
-    initializeUI(initial_task_ids, isDislaimerPresent) {
+    initializeUI(initial_task_ids, isDisclaimerPresent) {
         // populate options and models list (left column)
         this.initializeTargetVarsUI();
         this.initializeTaskIDsUI(initial_task_ids);
@@ -542,7 +542,7 @@ const App = {
         this.updateTruthAsOfCheckboxText();
 
         // initialize disclaimer
-        if (isDislaimerPresent) {
+        if (isDisclaimerPresent) {
             $('#disclaimer').text(this.state.disclaimer);
         }
 
