@@ -69,7 +69,15 @@ test('options object missing', assert => {
 
 test('options object blue sky', assert => {
     // per https://stackoverflow.com/questions/9822400/how-to-assert-that-a-function-does-not-raise-an-exception
+
+    // case: description present
     App.initialize('qunit-fixture', null, true, covid19ForecastsVizTestOptions, null);
+    assert.ok(true, "no Error raised");
+
+    // case: description missing
+    const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    delete optionsCopy['disclaimer'];
+    App.initialize('qunit-fixture', null, true, optionsCopy, null);
     assert.ok(true, "no Error raised");
 });
 

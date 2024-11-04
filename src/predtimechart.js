@@ -104,7 +104,7 @@ function _setSelectedTruths() {
  * @param taskIdsKeys - array of options.task_ids keys. used to create task rows - one per task ID
  * @private
  */
-function _createUIElements($componentDiv, isUemEnabled, taskIdsKeys) {
+function _createUIElements($componentDiv, isUemEnabled, taskIdsKeys, isDisclaimerPresent) {
     //
     // helper functions for creating for rows
     //
@@ -195,7 +195,9 @@ function _createUIElements($componentDiv, isUemEnabled, taskIdsKeys) {
         '    </div>\n' +
         '</div>'
     );
-    $vizDiv.append($('<p class="forecastViz_disclaimer"><b><span id="disclaimer">(disclaimer here)</span></b></p>'));
+    if (isDisclaimerPresent) {
+        $vizDiv.append($('<p class="forecastViz_disclaimer"><b><span id="disclaimer">(disclaimer here)</span></b></p>'));
+    }
     $vizDiv.append($('<div id="ploty_div" style="width: 100%; height: 72vh; position: relative;"></div>'));
     $vizDiv.append($buttonsDiv);
     $vizDiv.append($('<p style="text-align:center"><small>Note: You can navigate to forecasts from previous weeks with the left and right arrow keys</small></p>'));
@@ -379,7 +381,7 @@ const App = {
         this.state.available_as_ofs = options['available_as_ofs'];
         this.state.current_date = options['current_date'];
         this.state.models = options['models'];
-        this.state.disclaimer = options['disclaimer'];
+        this.state.disclaimer = options['disclaimer'];  // undefined if not present
         this.state.colors = Array(parseInt(this.state.models.length / 10, 10) + 1).fill([
             '#0d0887',
             '#46039f',
@@ -429,8 +431,9 @@ const App = {
 
         console.debug('initialize(): initializing UI');
         const $componentDiv = $(componentDivEle);
-        _createUIElements($componentDiv, this.isUemEnabled, Object.keys(this.state.task_ids));
-        this.initializeUI(options['initial_task_ids']);
+        const isDisclaimerPresent = options.hasOwnProperty('disclaimer');
+        _createUIElements($componentDiv, this.isUemEnabled, Object.keys(this.state.task_ids), isDisclaimerPresent);
+        this.initializeUI(options['initial_task_ids'], isDisclaimerPresent);
 
         // wire up UI controls (event handlers)
         this.addEventHandlers();
@@ -527,7 +530,7 @@ const App = {
             window.history.replaceState(newUrl.toString(), '', newUrl);
         }
     },
-    initializeUI(initial_task_ids) {
+    initializeUI(initial_task_ids, isDisclaimerPresent) {
         // populate options and models list (left column)
         this.initializeTargetVarsUI();
         this.initializeTaskIDsUI(initial_task_ids);
@@ -539,7 +542,9 @@ const App = {
         this.updateTruthAsOfCheckboxText();
 
         // initialize disclaimer
-        $('#disclaimer').text(this.state.disclaimer);
+        if (isDisclaimerPresent) {
+            $('#disclaimer').text(this.state.disclaimer);
+        }
 
         // initialize plotly (right column)
         const plotyDiv = document.getElementById('ploty_div');
