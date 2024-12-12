@@ -3,62 +3,7 @@
  */
 
 import {closestYear} from "./utils.js";
-import _calcUemForecasts from './user-ensemble-model.js';
 import _validateOptions from './validation.js';
-
-
-//
-// user ensemble model (UEM) functions
-//
-
-const USER_ENSEMBLE_MODEL = {  // contains all information about the model
-    name: 'User-Ensemble',  // must be a valid name, e.g., no spaces, commas, etc.
-    models: [],             // list of model names making up current UEM when it was added by addUserEnsembleModel()
-    lastError: null        // Error from last call to _calcUemForecasts()
-}
-
-
-/**
- * Validates modelName
- *
- * @param modelName candidate name for USER_ENSEMBLE_MODEL.name
- * @returns error message if invalid; false if valid: <= 31 chars . letter, number, underscore, or hyphen/dash
- * @private
- */
-function _isInvalidUemName(modelName) {
-    if (modelName.length === 0) {
-        return "name is required";
-    } else if (modelName.length > 31) {
-        return "name is more than 31 characters";
-    } else if (App.state.models.includes(modelName)) {
-        return "name already used";
-    } else if (!(/^[a-zA-Z0-9_-]+$/.test(modelName))) {
-        return "name had invalid characters. must be letters, numbers, underscores, or hypens'";
-    } else {
-        return false;  // valid
-    }
-}
-
-
-/**
- * Updates the user ensemble model's error icon in the models list based on USER_ENSEMBLE_MODEL.lastError .
- *
- * @private
- */
-function _updateUemErrorIcon() {
-    const error = USER_ENSEMBLE_MODEL.lastError;
-    const $modelCheckboxParent = $(`#${USER_ENSEMBLE_MODEL.name}`).parent();  // the <label> - see _selectModelDiv()
-    if (error === null) {
-        $modelCheckboxParent.children('img').remove();
-    } else {
-        const imgSrc = "https://github.githubassets.com/images/icons/emoji/unicode/26a0.png";
-        const $img = $(
-            `<img src="${imgSrc}" title="${error}" alt="${error}"\n` +
-            `    class="align-baseline" style="height: 16px; width: 16px; display: inline-block;" >`
-        );
-        $modelCheckboxParent.after('&nbsp;', $img);
-    }
-}
 
 
 //
@@ -100,11 +45,11 @@ function _setSelectedTruths() {
  * options on left and the plotly plot on the right
  *
  * @param $componentDiv - an empty Bootstrap 4 row (JQuery object)
- * @param isUemEnabled - true if the Action menu should be added
  * @param taskIdsKeys - array of options.task_ids keys. used to create task rows - one per task ID
+ * @param isDisclaimerPresent - true if we need to show a disclaimer from options
  * @private
  */
-function _createUIElements($componentDiv, isUemEnabled, taskIdsKeys, isDisclaimerPresent) {
+function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
     //
     // helper functions for creating for rows
     //
@@ -154,26 +99,7 @@ function _createUIElements($componentDiv, isUemEnabled, taskIdsKeys, isDisclaime
     $optionsDiv.append($truthCheckboxesDiv);
 
     // add model list controls
-    let optionsDivActionsDropdown;
-    if (isUemEnabled) {
-        optionsDivActionsDropdown = '<div class="dropdown">\n' +
-            '  <button class="btn btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" style="float: right;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">\n' +
-            '    Actions\n' +
-            '  </button>\n' +
-            '  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">\n' +
-            '    <a class="dropdown-item" id="addUserEnsemble" href="#">Add User Ensemble</a>\n' +
-            '    <a class="dropdown-item disabled" id="removeUserEnsemble" href="#">Remove User Ensemble</a>\n' +
-            '    <a class="dropdown-item disabled" id="downloadUserEnsemble" href="#">Download User Ensemble CSV</a>\n' +
-            '    <a class="dropdown-item disabled" id="infoUserEnsemble" href="#">User Ensemble Info...</a>\n' +
-            '    <a class="dropdown-item" id="editNameUserEnsemble" href="#">Edit User Ensemble Model Name...</a>\n' +
-            '    <a class="dropdown-item" id="helpUserEnsemble" target="_blank" href="https://github.com/reichlab/predtimechart#human-judgement-ensemble-model">Help...</a>\n' +
-            '  </div>\n' +
-            '</div>\n';
-    } else {
-        optionsDivActionsDropdown = '';
-    }
     $optionsDiv.append($(
-        optionsDivActionsDropdown +
         '<button type="button" class="btn btn-sm rounded-pill" id="forecastViz_shuffle" style="float: right;">\n' +
         '    Shuffle Colours</button>\n' +
         '<label class="forecastViz_label" for="forecastViz_all">Select Models:</label>\n' +
@@ -277,9 +203,6 @@ const App = {
     isIndicateRedraw: false,  // true if app should set plot opacity when loading data
     _fetchData: null,         // as documented in `initialize()`
 
-    _calcUemForecasts: null,  // user ensemble model computation function as documented in `initialize()`
-    isUemEnabled: true,       // true if user ensemble model feature is enabled
-
 
     //
     // app state
@@ -330,15 +253,11 @@ const App = {
      * @param {Boolean} isIndicateRedraw - controls whether the plot area should be grayed out while waiting for data
      *   requests
      * @param {Object} options - visualization initialization options as documented at https://docs.zoltardata.com/visualizationoptionspage/
-     * @param {Function} _calcUemForecasts - optional human judgement ensemble model function as documented in forecast-repository/forecast_app/templates/project_viz.html .
-     *   args: componentModels, targetKey, referenceDate, userModelName. NB: pass null for the function to disable the
-     *   feature.
      * @returns {String} - error message String or null if no error
      */
-    initialize(componentDiv, _fetchData, isIndicateRedraw, options, _calcUemForecasts) {
+    initialize(componentDiv, _fetchData, isIndicateRedraw, options) {
         this._fetchData = _fetchData;
         this.isIndicateRedraw = isIndicateRedraw;
-        this._calcUemForecasts = _calcUemForecasts;
 
         console.debug('initialize(): entered');
 
@@ -407,32 +326,10 @@ const App = {
         // populate UI elements, setting selection state to initial
         this.initializeBootstrapComponents(); // done here instead of initializeUI() so below `modal('show')` will work
 
-        // disable human judgement ensemble model feature if requested or if default model name conflict
-        if (typeof (_calcUemForecasts) != 'function') {
-            console.log('disabling human judgement ensemble model feature', _calcUemForecasts, typeof (_calcUemForecasts));
-            this.isUemEnabled = false;
-        } else if (this.state.models.includes(USER_ENSEMBLE_MODEL.name)) {
-            // oops: default user ensemble model name is taken. try once to generate a unique one
-            const newUemName = USER_ENSEMBLE_MODEL.name + '_' + Math.floor(Date.now() / 1000);  // timestamp in seconds
-            if (this.state.models.includes(newUemName)) {
-                console.warn('USER_ENSEMBLE_MODEL.name conflict. disabling human judgement ensemble model feature',
-                    USER_ENSEMBLE_MODEL.name, this.state.models);
-
-                // configure and show the info modal
-                $('#uemInfoModalTitle').html('Disabling human judgement ensemble model feature');
-                $('#uemInfoModalBody').html(`The default name '${USER_ENSEMBLE_MODEL.name}' was in the models list.`);
-                $('#uemInfoModal').modal('show');
-            } else {
-                USER_ENSEMBLE_MODEL.name = newUemName;
-                console.warn('USER_ENSEMBLE_MODEL.name conflict. renamed', USER_ENSEMBLE_MODEL.name,
-                    this.state.models, newUemName);
-            }
-        }
-
         console.debug('initialize(): initializing UI');
         const $componentDiv = $(componentDivEle);
         const isDisclaimerPresent = options.hasOwnProperty('disclaimer');
-        _createUIElements($componentDiv, this.isUemEnabled, Object.keys(this.state.task_ids), isDisclaimerPresent);
+        _createUIElements($componentDiv, Object.keys(this.state.task_ids), isDisclaimerPresent);
         this.initializeUI(options['initial_task_ids'], isDisclaimerPresent);
 
         // wire up UI controls (event handlers)
@@ -717,9 +614,6 @@ const App = {
 
         // re-wire up model checkboxes
         this.addModelCheckEventHandler();
-
-        // update the user ensemble model's error icon
-        _updateUemErrorIcon();
     },
     addEventHandlers() {
         // option, task ID, and interval selects
@@ -753,123 +647,6 @@ const App = {
             App.state.colors = App.state.colors.sort(() => 0.5 - Math.random())
             App.updateModelsList();
             App.updatePlot(true);
-        });
-
-        // User Ensemble Model Actions dropdown button. NB: these will not be created by initialize() if !isUemEnabled,
-        // but JQuery will not error if they don't exist :-)
-        $("#addUserEnsemble").click(function (event) {
-            event.preventDefault();
-            App.removeUserEnsembleModel();
-            App.addUserEnsembleModel();
-            App.updateModelsList();
-            App.updatePlot(true);
-            $("#removeUserEnsemble").removeClass('disabled');    // enable
-            $("#downloadUserEnsemble").removeClass('disabled');  // ""
-            $("#infoUserEnsemble").removeClass('disabled');      // ""
-            $("#editNameUserEnsemble").addClass('disabled');     // disable
-        });
-        $("#removeUserEnsemble").click(function (event) {
-            event.preventDefault();
-            App.removeUserEnsembleModel();
-            App.updateModelsList();
-            App.updatePlot(true);
-            $("#removeUserEnsemble").addClass('disabled');       // disable
-            $("#downloadUserEnsemble").addClass('disabled');     // ""
-            $("#infoUserEnsemble").addClass('disabled');         // ""
-            $("#editNameUserEnsemble").removeClass('disabled');  // enable
-        });
-        $("#downloadUserEnsemble").click(function (event) {
-            event.preventDefault();
-            let fileName = '';
-            App._calcUemForecasts(USER_ENSEMBLE_MODEL.models, App.state.selected_target_var, App.state.selected_as_of_date, USER_ENSEMBLE_MODEL.name)  // Promise
-                .then(response => {
-                    if (!response.ok) {
-                        console.error('#downloadUserEnsemble click: bad response', response);
-                        return response.text().then(text => {
-                            throw new Error(text);
-                        })
-                    }
-
-                    // contentDisposition is like: "attachment; filename=\"2022-01-29-User-Ensemble.csv\""
-                    const contentDisposition = Object.fromEntries(response.headers)['content-disposition'];
-                    fileName = contentDisposition.split('"')[1];
-                    return response.text();
-                })
-                .then((text) => {
-                    download(text, 'text/csv', fileName);
-
-                    // configure and show the info modal
-                    $('#uemInfoModalTitle').html('CSV File Downloaded');
-                    $('#uemInfoModalBody').html(`User ensemble downloaded to "${fileName}".`);
-                    $('#uemInfoModal').modal('show');
-                })
-                .catch(error => {  // NB: fetch() does not generate an error for 4__ responses
-                    console.error(`#downloadUserEnsemble click: error: ${error.message}`)
-
-                    // configure and show the info modal
-                    $('#uemInfoModalTitle').html('Error Downloading CVS File');
-                    $('#uemInfoModalBody').html(`"${error.message}"`);
-                    $('#uemInfoModal').modal('show');
-                });
-        });
-        $("#infoUserEnsemble").click(function (event) {
-            event.preventDefault();
-
-            // configure and show the info modal
-            const modelName = USER_ENSEMBLE_MODEL.name;
-            const componentModels = USER_ENSEMBLE_MODEL.models.join(", ");
-            const lastError = (USER_ENSEMBLE_MODEL.lastError === null) ? '(no errors)' : USER_ENSEMBLE_MODEL.lastError;
-            const $userInfoForm = $(
-                '<form>\n' +
-                '  <div class="form-group">\n' +
-                '    <label for="model-name" class="col-form-label">Model name:</label>\n' +
-                `    <input type="text" class="form-control" id="model-name" readonly value="${modelName}">\n` +
-                '  </div>\n' +
-                '  <div class="form-group">\n' +
-                '    <label for="model-list" class="col-form-label">Component models:</label>\n' +
-                `    <input type="text" class="form-control" id="model-list" readonly value="${componentModels}">\n` +
-                '  </div>\n' +
-                '  <div class="form-group">\n' +
-                '    <label for="last-error" class="col-form-label">Last error:</label>\n' +
-                `    <textarea class="form-control" id="last-error" readonly>${lastError}</textarea>\n` +
-                '  </div>\n' +
-                '</form>'
-            );
-            $('#uemInfoModalTitle').html('User Ensemble Settings');
-            $('#uemInfoModalBody').html($userInfoForm);
-            $('#uemInfoModal').modal('show');
-        });
-
-        // handle #uemEditModelNameModal activity:
-        $('#uemEditModelName').on('input', function () {
-            // validate model name edit on each keystroke, displaying the result:
-            const modelName = $('#uemEditModelName').val();
-            const isInvalid = _isInvalidUemName(modelName);  // error message if invalid; false if valid
-            const $invalidFeedbackDiv = $('#uemEditModelNameModal .invalid-feedback');
-            const $modelNameInput = $('#uemEditModelNameModal input');
-            if (isInvalid) {
-                $invalidFeedbackDiv.html(isInvalid);
-                $invalidFeedbackDiv.show();
-                $modelNameInput.addClass('is-invalid')
-            } else {
-                $invalidFeedbackDiv.html('');
-                $invalidFeedbackDiv.hide();
-                $modelNameInput.removeClass('is-invalid')
-            }
-        });
-        $("#uemEditSaveButton").click(function () {
-            // save the new name (assumed valid)
-            const newModelName = $("#uemEditModelName").val();
-            USER_ENSEMBLE_MODEL.name = newModelName;
-            console.info(`saved new user ensemble model name: '${newModelName}'`);
-        });
-        $("#editNameUserEnsemble").click(function (event) {
-            event.preventDefault();
-
-            // configure and show the user model name edit modal
-            const modelName = USER_ENSEMBLE_MODEL.name;
-            $("#uemEditModelName").val(modelName);  // initialize name to current
-            $('#uemEditModelNameModal').modal('show');
         });
 
         // "Select Models" checkbox
@@ -1021,20 +798,6 @@ const App = {
             }
             Promise.all(promises).then((values) => {
                 console.debug(`fetchDataUpdatePlot(${isFetchFirst}, ${isFetchCurrentTruth}): Promise.all() done. updating plot`, values);
-
-                // update user ensemble model if any
-                if (this.isUemEnabled && this.state.models.includes(USER_ENSEMBLE_MODEL.name)) {
-                    try {
-                        this.state.forecasts[USER_ENSEMBLE_MODEL.name] = _calcUemForecasts(USER_ENSEMBLE_MODEL.models, this.state.forecasts);  // replaces if present
-                        USER_ENSEMBLE_MODEL.lastError = null;
-                        console.debug('fetchDataUpdatePlot(): forecasts:', this.state.forecasts[USER_ENSEMBLE_MODEL.name]);
-                    } catch (error) {
-                        USER_ENSEMBLE_MODEL.lastError = error;
-                        console.error(`fetchDataUpdatePlot(): error calling _calcUemForecasts(): ${error}`);
-                    }
-                }
-
-                this.updateModelsList();
                 this.updatePlot(isResetYLimit);
                 if (this.isIndicateRedraw) {
                     $plotyDiv.fadeTo(0, 1.0);
@@ -1074,63 +837,6 @@ const App = {
                 this.state.forecasts = data;
             })
             .catch(error => console.error(`fetchForecasts(): error: ${error.message}`));
-    },
-
-    //
-    // user ensemble model-related functions
-    //
-
-    /**
-     * Creates a user ensemble model (UEM) named USER_ENSEMBLE_MODEL.name using the currently-selected models in
-     * #forecastViz_select_model. Does not call removeUserEnsembleModel() first.
-     */
-    addUserEnsembleModel() {
-        // validate componentModels: there must be at least two
-        const componentModels = this.state.selected_models.filter(function (value) {
-            return value !== USER_ENSEMBLE_MODEL.name;
-        });
-
-        // validation #1
-        if (componentModels.length <= 1) {
-            console.warn(`addUserEnsembleModel(): must select two or more componentModels. #selected=${componentModels.length}`);
-
-            // configure and show the info modal
-            $('#uemInfoModalTitle').html('Invalid Component Models');
-            $('#uemInfoModalBody').html(`Must select two or more componentModels (${componentModels.length} selected).`);
-            $('#uemInfoModal').modal('show');
-
-            return;
-        }
-
-        try {
-            this.state.forecasts[USER_ENSEMBLE_MODEL.name] = _calcUemForecasts(componentModels, this.state.forecasts);  // replaces if present
-            USER_ENSEMBLE_MODEL.lastError = null;
-            console.debug('addUserEnsembleModel(): forecasts:', this.state.forecasts[USER_ENSEMBLE_MODEL.name]);
-        } catch (error) {
-            USER_ENSEMBLE_MODEL.lastError = error;
-            console.error(`addUserEnsembleModel(): error calling _calcUemForecasts(): ${error}`);
-        }
-
-        if (!this.state.models.includes(USER_ENSEMBLE_MODEL.name)) {
-            this.state.models.unshift(USER_ENSEMBLE_MODEL.name);  // add to front so sorts at top of models list
-        }
-        if (!this.state.selected_models.includes(USER_ENSEMBLE_MODEL.name)) {
-            this.state.selected_models.push(USER_ENSEMBLE_MODEL.name);
-        }
-        USER_ENSEMBLE_MODEL.models.length = 0;  // quick way to clear an array
-        USER_ENSEMBLE_MODEL.models.push(...componentModels);
-        console.debug('addUserEnsembleModel(): created:', USER_ENSEMBLE_MODEL.name, USER_ENSEMBLE_MODEL.models);
-    },
-
-    /**
-     * Removes the user ensemble model (UEM) named USER_ENSEMBLE_MODEL.name, if any.
-     */
-    removeUserEnsembleModel() {
-        delete this.state.forecasts[USER_ENSEMBLE_MODEL.name];
-        this.state.models = this.state.models.filter(item => item !== USER_ENSEMBLE_MODEL.name)
-        this.state.selected_models = this.state.selected_models.filter(item => item !== USER_ENSEMBLE_MODEL.name)
-        USER_ENSEMBLE_MODEL.models.length = 0;  // quick way to clear an array
-        USER_ENSEMBLE_MODEL.lastError = null;
     },
 
     //

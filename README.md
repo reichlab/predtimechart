@@ -50,15 +50,13 @@ In your HTML file, load the required CSS and JavaScript files:
     // import the module's entry point (the `App` object)
     import App from 'https://cdn.jsdelivr.net/gh/reichlab/predtimechart@2.0.9/dist/predtimechart.js';
 
-    // set up _fetchData, _calcUemForecasts (optional), and options
+    // set up _fetchData and options
     function _fetchData(isForecast, targetKey, taskIDs, referenceDate) { ... }
-
-    function _calcUemForecasts(componentModels, targetKey, referenceDate, userModelName) { ... }
-
+    
     const options = {...};
 
-    // initialize the component: componentDiv, _fetchData, isIndicateRedraw, options, _calcUemForecasts
-    App.initialize('forecastViz_row', _fetchData, false, options, _calcUemForecasts);
+    // initialize the component: componentDiv, _fetchData, isIndicateRedraw, options
+    App.initialize('forecastViz_row', _fetchData, false, options);
 </script>
 ```
 
@@ -78,7 +76,7 @@ Predtimechart has adopted a simplified version of the _modeling tasks_ concept d
 
 ## App.initialize() args
 
-`App.initialize(componentDiv, _fetchData, isIndicateRedraw, options, _calcUemForecasts)` takes these args:
+`App.initialize(componentDiv, _fetchData, isIndicateRedraw, options)` takes these args:
 
 - `componentDiv`: `id` of the empty `<div>` to place the component into.
 - `_fetchData`: function to retrieve truth and forecast data. It is called whenever the plot needs updating. See the "fetchData data format" section for details. It takes these args:
@@ -88,12 +86,6 @@ Predtimechart has adopted a simplified version of the _modeling tasks_ concept d
     - `referenceDate`: "" reference date "". Must be one of the values in the options object's `available_as_ofs` value.
 - `isIndicateRedraw`: `boolean` that controls whether the plot area should be grayed out while waiting for data requests. Useful for applications that have a noticeable delay when fetching data.
 - `options`: `object` that contains initialization data. See the "Options object" section for details.
-- `calcUemForecasts`: optional human judgement ensemble model function. pass null to disable the feature. It takes these args:
-    - `componentModels`: an array of model names, a subset of those in the `options` object (see below).
-    - `targetKey`: same as passed to `_fetchData` above.
-    - `referenceDate`: ""
-    - `userModelName`: The model's displayed name. Must be a valid name, e.g., no spaces, commas, etc.
-
 
 # Options object
 
@@ -269,28 +261,3 @@ To jump to a specific "as of" date (i.e., reference date), use the calendar icon
 ## Screenshot
 
 ![screenshot](docs/screenshot.png)
-
-
-# Human judgement ensemble model
-
-Predtimechart includes an optionally-enabled beta feature that supports creating an ensemble forecast file based on the existing models initialized in the app. These input "component models" are used by the human judgement ensemble model code to calculate forecasts based on those models' data. For now the arithmetic mean is used, but future versions will support other calculations. Note that the feature must be enabled by the predtimechart developer to be available. Otherwise, the "Actions" dropdown menu documented below will not be present.
-
-
-## Usage
-All interactions with the feature take place using the "Actions" dropdown menu next to the "Shuffle Colors" button in the left sidebar. (Note that you will not see that dropdown if the feature is disabled.) The actions are:
-
-- **Add User Ensemble** (always enabled): Creates a new model or replaces the existing one using the currently-selected models as components. Visually, the model works like any other model (shows in the model list and the plot, can be checked/unchecked, re-calculated when changing outcome/unit/reference date, etc.)
-- **Remove User Ensemble** (enabled if model exists): Removes the model from model list.
-- **Download User Ensemble CSV** (enabled ""): Calls the _`calcUemForecasts` function passed to `App.initialize()` (see above) compute and download a cross-unit forecast. The CSV file format is documented [here](https://docs.zoltardata.com/fileformats/#forecast-data-format-csv).
-- **User Ensemble Info...** (enabled if model exists): Shows details about the model: The model's name, its component models, and the last error encountered trying to compute the forecasts, if any.
-- **Edit User Ensemble Model Name...** (enabled if model does not exist): Shows a dialog box for renaming the user model from the default. Note: You can only edit the model name when there's no current user ensemble model added. To rename you must first do "Remove User Ensemble" if you've previously added one.
-- **Help...**: Takes you to this page.
-
-
-A typical Human judgement ensemble model workflow is:
-
-1. Explore the existing models' forecasts to decide which might make good component models.
-1. Select those component models in the models list in the left sidebar under "Select Models".
-1. Select the "Add User Ensemble" item in the "Actions" dropdown menu to add the "User Ensemble" model to the app.
-1. Explore the new model's forecasts and either move to the next step if you're happy with them, or repeat the above steps to try other component models.
-1. Select "Download User Ensemble CSV" in the "Actions" dropdown menu. This will contact the server, which will compute a forecasts for all units in the system, create a CSV file, and send it back to the app. When done, you will see a notification that the file was downloaded and saved.
