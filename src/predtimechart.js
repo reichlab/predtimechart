@@ -324,8 +324,6 @@ const App = {
         this.state.selected_models = options['initial_checked_models'];
 
         // populate UI elements, setting selection state to initial
-        this.initializeBootstrapComponents(); // done here instead of initializeUI() so below `modal('show')` will work
-
         console.debug('initialize(): initializing UI');
         const $componentDiv = $(componentDivEle);
         const isDisclaimerPresent = options.hasOwnProperty('disclaimer');
@@ -499,54 +497,6 @@ const App = {
             }
         });
 
-    },
-    initializeBootstrapComponents() {
-        const $uemInfoModalDiv = $(
-            '<div class="modal fade" id="uemInfoModal" tabIndex="-1" aria-labelledby="uemInfoModalTitle"\n' +
-            '     aria-hidden="true">\n' +
-            '    <div class="modal-dialog">\n' +
-            '        <div class="modal-content">\n' +
-            '            <div class="modal-header">\n' +
-            '                <h5 class="modal-title" id="uemInfoModalTitle">(title here)</h5>\n' +
-            '                <a class="close" data-dismiss="modal">&times;</a>\n' +
-            '            </div>\n' +
-            '            <div class="modal-body" id="uemInfoModalBody">(body here)</div>\n' +
-            '            <div class="modal-footer">\n' +
-            '                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>\n' +
-            '            </div>\n' +
-            '        </div>\n' +
-            '    </div>\n' +
-            '</div>'
-        );
-        $(document.body).append($uemInfoModalDiv);
-
-        // form onsubmit trick per https://stackoverflow.com/questions/15239236/bootstrap-modal-dialogs-with-a-single-text-input-field-always-dismiss-on-enter-k
-        const $uemEditModelNameModalDiv = $(
-            '<div class="modal fade" id="uemEditModelNameModal" tabIndex="-1" aria-labelledby="uemInfoModalTitle"\n' +
-            '     aria-hidden="true">\n' +
-            '    <div class="modal-dialog">\n' +
-            '        <div class="modal-content">\n' +
-            '            <div class="modal-header">\n' +
-            '                <h5 class="modal-title" id="uemInfoModalTitle">User Ensemble Model Name</h5>\n' +
-            '                <a class="close" data-dismiss="modal">&times;</a>\n' +
-            '            </div>\n' +
-            '            <div class="modal-body">\n' +
-            '               <form novalidate onsubmit="return false">\n' +
-            '                   <div class="form-group">\n' +
-            '                       <label for="model-name" class="col-form-label">Model name:</label>\n' +
-            '                       <input type="text" class="form-control is-valid" id="uemEditModelName" value="(name here)">\n' +
-            '                       <div class="invalid-feedback hidden">(invalid here)</div>\n' +
-            '                   </div>\n' +
-            '               </form>\n' +
-            '            </div>\n' +
-            '            <div class="modal-footer">\n' +
-            '                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>\n' +
-            '                <button type="button" class="btn btn-primary" data-dismiss="modal" id="uemEditSaveButton">Save</button>\n' +
-            '           </div>\n' +
-            '    </div>\n' +
-            '</div>'
-        );
-        $(document.body).append($uemEditModelNameModalDiv);
     },
     initializeTargetVarsUI() {
         // populate the target variable <SELECT>
@@ -798,6 +748,7 @@ const App = {
             }
             Promise.all(promises).then((values) => {
                 console.debug(`fetchDataUpdatePlot(${isFetchFirst}, ${isFetchCurrentTruth}): Promise.all() done. updating plot`, values);
+                this.updateModelsList();
                 this.updatePlot(isResetYLimit);
                 if (this.isIndicateRedraw) {
                     $plotyDiv.fadeTo(0, 1.0);
