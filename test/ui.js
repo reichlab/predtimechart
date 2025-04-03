@@ -28,7 +28,11 @@ const covid19ForecastsVizTestOptions = {
         "text": "week ahead incident deaths",
         "plot_text": "week ahead incident deaths"
     }],
-    "task_ids": {"unit": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]},
+    "task_ids": {
+        "week_ahead_incident_deaths": {
+            "unit": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]
+        }
+    },
 };
 
 
@@ -55,7 +59,7 @@ test('initialize() creates SELECTs', assert => {
     // tests that options SELECTs were created
 
     // case: one task_ids
-    App.initialize('qunit-fixture', _fetchData, true, covid19ForecastsVizTestOptions, null);
+    App.initialize('qunit-fixture', _fetchData, true, covid19ForecastsVizTestOptions);
     ["target_variable", "unit", "intervals"].forEach((selectId) => {
         const selectEle = document.getElementById(selectId);
         assert.true(selectEle !== null);
@@ -64,11 +68,13 @@ test('initialize() creates SELECTs', assert => {
     // case: two tasks_ids
     const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
     optionsCopy['task_ids'] = {
-        "scenario_id": [{"value": "1", "text": "scenario 1"}, {"value": "2", "text": "scenario 2"}],
-        "location": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]
+        "week_ahead_incident_deaths": {
+            "scenario_id": [{"value": "1", "text": "scenario 1"}, {"value": "2", "text": "scenario 2"}],
+            "location": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]
+        }
     };
     optionsCopy['initial_task_ids'] = {"scenario_id": "1", "location": "48"};
-    App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     ["target_variable", "scenario_id", "location", "intervals"].forEach((selectId) => {
         const selectEle = document.getElementById(selectId);
         assert.true(selectEle !== null);
@@ -90,7 +96,7 @@ test('selectedTaskIDs() and selectedTaskIDValues() are correct', assert => {
         "location": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]
     };
     optionsCopy['initial_task_ids'] = {"scenario_id": "1", "location": "48"};
-    App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
 
     // test selectedTaskIDs()
     assert.deepEqual(App.selectedTaskIDs(), {
@@ -112,14 +118,14 @@ QUnit.module('optional disclaimer');
 test('initialize() creates .forecastViz_disclaimer <P> only if disclaimer present', assert => {
     // case 1: disclaimer is present
     let optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
-    App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     let foundEles = document.getElementsByClassName('forecastViz_disclaimer');
     assert.equal(foundEles.length, 1);
 
     // case 1: disclaimer is missing
     optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
     delete optionsCopy['disclaimer'];
-    App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     foundEles = document.getElementsByClassName('forecastViz_disclaimer');
     assert.equal(foundEles.length, 0);
 });

@@ -39,7 +39,7 @@ function _validateOptions(options) {
     }
 
     // validate non-schema (i.e., semantic) constraints.
-    // semantics test: available_as_ofs keys in target_variables value
+    // case: available_as_ofs keys in target_variables value
     const availableAsOfs = options['available_as_ofs'];
     const targetVariables = options['target_variables'];
     Object.keys(availableAsOfs).forEach(availableAsOfKey => {
@@ -54,7 +54,21 @@ function _validateOptions(options) {
         }
     });
 
-    // semantics test: initial_checked_models in models
+    // case: task_ids keys in target_variables value
+    const taskIds = options['task_ids'];
+    Object.keys(taskIds).forEach(taskIDsKey => {
+        let keyWasPresent = false;
+        targetVariables.forEach(targetVariable => {
+            if (targetVariable.value === taskIDsKey) {
+                keyWasPresent = true;
+            }
+        });
+        if (!keyWasPresent) {
+            throw `task_ids key not in target_variables value. key=${taskIDsKey}`;
+        }
+    });
+
+    // case: initial_checked_models in models
     const models = options['models'];
     options['initial_checked_models'].forEach(model => {
         if (!models.includes(model)) {
@@ -62,20 +76,20 @@ function _validateOptions(options) {
         }
     });
 
-    // semantics test: initial_interval in intervals
+    // case: initial_interval in intervals
     const initialInterval = options['initial_interval'];
     if (!options['intervals'].includes(initialInterval)) {
         throw `initial_interval not in intervals: ${initialInterval}`;
     }
 
-    // semantics test: initial_target_var in target_variables values
+    // case: initial_target_var in target_variables values
     const targetVarValues = targetVariables.map((targetVariable) => targetVariable['value']);
     const initialTargetVar = options['initial_target_var'];
     if (!targetVarValues.includes(initialTargetVar)) {
         throw `initial_target_var not in target_variables: ${initialTargetVar}`;
     }
 
-    // semantics test: initial_as_of in available_as_ofs array. NB: this test must come after
+    // case: initial_as_of in available_as_ofs array. NB: this test must come after
     // "initial_target_var in target_variables values" test b/c here we depend on initial_target_var being valid
     const initialAsOf = options['initial_as_of'];
     const initialTargetVarAvailAsOfs = availableAsOfs[initialTargetVar];
@@ -83,17 +97,16 @@ function _validateOptions(options) {
         throw `initial_as_of not in available_as_ofs: ${initialAsOf}`;
     }
 
-    // semantics test: initial_task_ids key in task_ids
-    const taskIds = options['task_ids'];
+    // case: initial_task_ids key in task_ids
     const initialTaskIds = options['initial_task_ids'];
-    if (!eqSet(new Set(Object.keys(taskIds)), new Set(Object.keys(initialTaskIds)))) {
+    if (!eqSet(new Set(Object.keys(taskIds[initialTargetVar])), new Set(Object.keys(initialTaskIds)))) {
         throw `initial_task_ids key !== task_ids: ${JSON.stringify(initialTaskIds)}`;
     }
 
-    // semantics test 7/7: initial_task_ids value in task_ids
+    // case: initial_task_ids value in task_ids
     Object.keys(initialTaskIds).forEach(initialTaskIdKey => {
         const initialTaskIdValue = initialTaskIds[initialTaskIdKey];
-        const taskIdValues = taskIds[initialTaskIdKey].map((taskIdObj) => taskIdObj['value']);
+        const taskIdValues = taskIds[initialTargetVar][initialTaskIdKey].map((taskIdObj) => taskIdObj['value']);
         if (!taskIdValues.includes(initialTaskIdValue)) {
             throw `initial_task_ids value not in task_ids. initialTaskIdValue=${initialTaskIdValue}, taskIdValues=${taskIdValues}`;
         }

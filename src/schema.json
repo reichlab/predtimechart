@@ -114,28 +114,30 @@
       "description": "`object` defining the _tasks_ in the data as described in `_fetchData`'s `taskIDs` arg",
       "type": "object",
       "minProperties": 1,
-      "patternProperties": {
-        "^[A-Za-z]+[A-Za-z0-9_-]*$": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "value": {
-                "description": "used as the main value that's passed around for the task_id",
-                "type": "string",
-                "minLength": 1
-              },
-              "text": {
-                "description": "human-readable text",
-                "type": "string",
-                "minLength": 1
+      "additionalProperties": {
+        "type": "object",
+        "patternProperties": {
+          "^[A-Za-z]+[A-Za-z0-9_-]*$": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "description": "used as the main value that's passed around for the task_id",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "text": {
+                  "description": "human-readable text",
+                  "type": "string",
+                  "minLength": 1
+                }
               }
             }
           }
         }
-      },
-      "additionalProperties": false
+      }
     }
   },
-  "required": ["available_as_ofs", "current_date", "initial_as_of", "initial_checked_models", "initial_interval",
-    "initial_target_var", "initial_task_ids", "intervals", "models", "target_variables", "task_ids"]}
+  "required": ["available_as_ofs", "current_date", "initial_as_of", "initial_checked_models", "initial_interval", "initial_target_var", "initial_task_ids", "intervals", "models", "target_variables", "task_ids"]
+}

@@ -5,7 +5,7 @@ const {test} = QUnit;
 
 
 //
-// an options object to work with
+// options objects to work with
 //
 
 const covid19ForecastsVizTestOptions = {
@@ -28,7 +28,63 @@ const covid19ForecastsVizTestOptions = {
         "text": "week ahead incident deaths",
         "plot_text": "week ahead incident deaths"
     }],
-    "task_ids": {"unit": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]},
+    "task_ids": {
+        "week_ahead_incident_deaths": {
+            "unit": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]
+        }
+    },
+};
+
+
+const fluMetrocastOptions = {
+    "available_as_ofs": {
+        "ILI ED visits": ["2025-02-22", "2025-03-01"],
+        "Flu ED visits pct": ["2025-02-22", "2025-03-01"]
+    },
+    "current_date": "2025-03-01",
+    "initial_as_of": "2025-03-01",
+    "initial_checked_models": ["epiENGAGE-Copycat", "epiENGAGE-GBQR", "epiENGAGE-INFLAenza", "epiforecasts-dyngam"],
+    "initial_interval": "95%",
+    "initial_target_var": "ILI ED visits",
+    "initial_task_ids": {
+        "location": "NYC"
+    },
+    "initial_xaxis_range": null,
+    "intervals": ["0%", "50%", "95%"],
+    "models": ["epiENGAGE-Copycat", "epiENGAGE-GBQR", "epiENGAGE-INFLAenza", "epiforecasts-dyngam"],
+    "target_variables": [
+        {
+            "plot_text": "ED visits due to ILI",
+            "text": "ED visits due to ILI",
+            "value": "ILI ED visits"
+        },
+        {
+            "plot_text": "Percentage of ED visits due to influenza",
+            "text": "Percentage of ED visits due to influenza",
+            "value": "Flu ED visits pct"
+        }
+    ],
+    "task_ids": {
+        "ILI ED visits": {
+            "location": [
+                {"text": "NYC", "value": "NYC"},
+                {"text": "Bronx", "value": "Bronx"},
+                {"text": "Brooklyn", "value": "Brooklyn"},
+                {"text": "Manhattan", "value": "Manhattan"},
+                {"text": "Queens", "value": "Queens"},
+                {"text": "Staten Island", "value": "Staten Island"}
+            ],
+            "Flu ED visits pct": {
+                "location": [
+                    {"text": "Austin", "value": "Austin"},
+                    {"text": "Houston", "value": "Houston"},
+                    {"text": "Dallas", "value": "Dallas"},
+                    {"text": "El Paso", "value": "El Paso"},
+                    {"text": "San Antonio", "value": "San Antonio"}
+                ]
+            }
+        }
+    }
 };
 
 
@@ -54,7 +110,7 @@ QUnit.module('initialize() basic structural validation');
 test('componentDiv not found', assert => {
     assert.throws(
         function () {
-            App.initialize('bad-div', null, true, covid19ForecastsVizTestOptions, null);
+            App.initialize('bad-div', null, true, covid19ForecastsVizTestOptions);
         },
         /componentDiv DOM node not found/,
     );
@@ -62,22 +118,29 @@ test('componentDiv not found', assert => {
 
 
 test('options object missing', assert => {
-    const actValue = App.initialize('qunit-fixture', null, true, null, null);
+    const actValue = App.initialize('qunit-fixture', null, true, null);
     assert.equal(actValue, `options object is required but missing`);
 });
 
 
-test('options object blue sky', assert => {
+test('options object blue sky covid', assert => {
     // per https://stackoverflow.com/questions/9822400/how-to-assert-that-a-function-does-not-raise-an-exception
 
     // case: description present
-    App.initialize('qunit-fixture', null, true, covid19ForecastsVizTestOptions, null);
+    App.initialize('qunit-fixture', null, true, covid19ForecastsVizTestOptions);
     assert.ok(true, "no Error raised");
 
     // case: description missing
     const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
     delete optionsCopy['disclaimer'];
-    App.initialize('qunit-fixture', null, true, optionsCopy, null);
+    App.initialize('qunit-fixture', null, true, optionsCopy);
+    assert.ok(true, "no Error raised");
+});
+
+
+test('options object blue sky flu-metrocast', assert => {
+    // per https://stackoverflow.com/questions/9822400/how-to-assert-that-a-function-does-not-raise-an-exception
+    App.initialize('qunit-fixture', null, true, fluMetrocastOptions);
     assert.ok(true, "no Error raised");
 });
 
@@ -89,7 +152,7 @@ test('available_as_ofs at least one key', assert => {
     optionsCopy['available_as_ofs'] = {};
 
     const regExp = /invalid options structure.*available_as_ofs.*"must NOT have fewer than 1 properties/;
-    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     assert.true(regExp.test(actValue));
 });
 
@@ -101,7 +164,16 @@ test('available_as_ofs keys in target_variables value', assert => {
     optionsCopy['available_as_ofs'] = {"bad key": ["2021-01-01"]};
 
     const regExp = /available_as_ofs key not in target_variables value/;
-    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
+    assert.true(regExp.test(actValue));
+});
+
+test('task_ids keys in target_variables value', assert => {
+    const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    optionsCopy['task_ids'] = {"bad key": {"unit": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]}};
+
+    const regExp = /task_ids key not in target_variables value/;
+    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     assert.true(regExp.test(actValue));
 });
 
@@ -111,7 +183,7 @@ test('initial_as_of in available_as_ofs array', assert => {
     optionsCopy['initial_as_of'] = "2021-01-01";
 
     const regExp = /initial_as_of not in available_as_ofs/;
-    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     assert.true(regExp.test(actValue));
 });
 
@@ -121,7 +193,7 @@ test('initial_checked_models in models', assert => {
     optionsCopy['initial_checked_models'] = [null];
 
     const regExp = /initial_checked_models model not in models/;
-    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     assert.true(regExp.test(actValue));
 });
 
@@ -131,7 +203,7 @@ test('initial_interval in intervals', assert => {
     optionsCopy['initial_interval'] = "not in intervals";
 
     const regExp = /initial_interval not in intervals/;
-    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     assert.true(regExp.test(actValue));
 });
 
@@ -141,7 +213,7 @@ test('initial_target_var in target_variables values', assert => {
     optionsCopy['initial_target_var'] = "not in target_variables";
 
     const regExp = /initial_target_var not in target_variables/;
-    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     assert.true(regExp.test(actValue));
 });
 
@@ -150,12 +222,12 @@ test('initial_task_ids in task_ids value', assert => {
     const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
     optionsCopy['initial_task_ids'] = {"key not in task_ids": null};
 
-    var regExp = /initial_task_ids key !== task_ids/;
-    var actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    let regExp = /initial_task_ids key !== task_ids/;
+    let actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     assert.true(regExp.test(actValue));
 
     optionsCopy['initial_task_ids'] = {"unit": "value not in task_ids"};
     regExp = /initial_task_ids value not in task_ids/;
-    actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy, null);
+    actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     assert.true(regExp.test(actValue));
 });

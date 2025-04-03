@@ -2,7 +2,7 @@
  * predtimechart: A JavaScript (ES6 ECMAScript) module for forecast visualization.
  */
 
-import {closestYear} from "./utils.js";
+import {closestYear, getOptionsFromURL} from "./utils.js";
 import _validateOptions from './validation.js';
 
 
@@ -51,7 +51,7 @@ function _setSelectedTruths() {
  */
 function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
     //
-    // helper functions for creating for rows
+    // helper functions for creating rows
     //
 
     function titleCase(str) {  // per https://stackoverflow.com/questions/196972/convert-string-to-title-case-with-javascript
@@ -136,35 +136,11 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
 }
 
 
-//
-// saveFile() helper for $("#downloadUserEnsemble").click()
-// - per https://stackoverflow.com/questions/3665115/how-to-create-a-file-in-memory-for-user-to-download-but-not-through-server
-//
-
-function download(content, mimeType, filename) {
-    if (window.navigator.msSaveOrOpenBlob) {
-        window.navigator.msSaveOrOpenBlob(blob, filename);
-    } else {
-        const a = document.createElement('a')
-        document.body.appendChild(a);
-        const blob = new Blob([content], {type: mimeType}) // Create a blob (file-like object)
-        const url = URL.createObjectURL(blob)
-        a.setAttribute('href', url)
-        a.setAttribute('download', filename)
-        a.click()  // Start downloading
-        setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        }, 0)
-    }
-}
-
-
 /**
  * Shows a modal dialog with a close button.
  *
- * @param {String} - title
- * @param {String} - message
+ * @param {String} title
+ * @param {String} message
  */
 function showDialog(title, message) {
     console.log(`flashMessage(): ${message}`);
@@ -211,9 +187,9 @@ const App = {
     state: {
         // Static data, fixed at time of creation:
         target_variables: [],
-        task_ids: [],
+        task_ids: {},
         intervals: [],
-        available_as_ofs: [],
+        available_as_ofs: {},
         current_date: "",
         models: [],
         disclaimer: "",
@@ -279,7 +255,7 @@ const App = {
 
         // validate options object merged with URL params, if present
         let isShowOptionsInURL = false;
-        const optionsFromURL = this.getOptionsFromURL(options['task_ids']);
+        const optionsFromURL = getOptionsFromURL(options['task_ids'], window.location.search);
         if (Object.keys(optionsFromURL).length !== 0) {
             const mergedOptions = {...options, ...optionsFromURL}  // NB: second overrides first
             try {
@@ -327,8 +303,13 @@ const App = {
         console.debug('initialize(): initializing UI');
         const $componentDiv = $(componentDivEle);
         const isDisclaimerPresent = options.hasOwnProperty('disclaimer');
-        _createUIElements($componentDiv, Object.keys(this.state.task_ids), isDisclaimerPresent);
-        this.initializeUI(options['initial_task_ids'], isDisclaimerPresent);
+
+        // use an arbitrary task_ids target_variables.value b/c task_id keys all are the same (App caller validates)
+        const taskIdsKey = Object.keys(this.state.task_ids)[0];
+        const taskIdsKeys = Object.keys(this.state.task_ids[taskIdsKey]);
+        _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent);
+
+        this.initializeUI(options['task_ids'], options['initial_target_var'], options['initial_task_ids'], isDisclaimerPresent);
 
         // wire up UI controls (event handlers)
         this.addEventHandlers();
@@ -344,47 +325,6 @@ const App = {
 
         console.debug('initialize(): done');
         return null;  // no error
-    },
-    /**
-     * initialize() helper that returns an object like that function's `options` object, but filled with values from the
-     * current window location. Does not check for missing parameters.
-     *
-     * @param {Object} task_ids - as passed to initialize()'s options['task_ids']
-     * @returns {Object}
-     */
-    getOptionsFromURL(task_ids) {
-        const options = {};
-        const searchParams = new URLSearchParams(window.location.search)
-        if (searchParams.get('as_of')) {
-            options['initial_as_of'] = searchParams.get('as_of');
-        }
-        if (searchParams.get('interval')) {
-            options['initial_interval'] = searchParams.get('interval');
-        }
-        if (searchParams.get('target_var')) {
-            options['initial_target_var'] = searchParams.get('target_var');
-        }
-        if (searchParams.get('model')) {  // at least one
-            options['initial_checked_models'] = searchParams.getAll('model');
-        }
-        if (searchParams.get('xaxis_range')) {
-            options['initial_xaxis_range'] = searchParams.getAll('xaxis_range');
-        }
-        if (searchParams.get('yaxis_range')) {
-            options['initial_yaxis_range'] = searchParams.getAll('yaxis_range');
-        }
-
-        const initial_task_ids = {}; // NB: these are values, not text
-        Object.keys(task_ids).forEach(function (taskIdKey) {
-            if (searchParams.get(taskIdKey)) {
-                initial_task_ids[taskIdKey] = searchParams.get(taskIdKey);
-            }
-        });
-        if (Object.keys(initial_task_ids).length !== 0) {
-            options['initial_task_ids'] = initial_task_ids;
-        }
-
-        return options;
     },
     showOptionsInURL() {
         const newUrl = new URL(window.location.origin + window.location.pathname);
@@ -425,10 +365,10 @@ const App = {
             window.history.replaceState(newUrl.toString(), '', newUrl);
         }
     },
-    initializeUI(initial_task_ids, isDisclaimerPresent) {
+    initializeUI(taskIDs, initialTargetVar, initialTaskIDs, isDisclaimerPresent) {
         // populate options and models list (left column)
         this.initializeTargetVarsUI();
-        this.initializeTaskIDsUI(initial_task_ids);
+        this.initializeTaskIDsUI(taskIDs, initialTargetVar, initialTaskIDs);
         this.initializeIntervalsUI();
         this.updateModelsList();
 
@@ -509,15 +449,14 @@ const App = {
             $targetVarsSelect.append(optionNode);
         });
     },
-    initializeTaskIDsUI(initialTaskIds) {
+    initializeTaskIDsUI(taskIDs, targetVar, taskIds) {
         // populate task ID-related <SELECT>s
-        const thisState = this.state;
-        Object.keys(this.state.task_ids).forEach(function (taskIdKey) {
+        Object.keys(taskIDs[targetVar]).forEach(function (taskIdKey) {
             const $taskIdSelect = $(`#${taskIdKey}`);  // created by _createUIElements()
-            // $taskIdSelect.empty();
-            const taskIdValueObjs = thisState.task_ids[taskIdKey];
+            $taskIdSelect.empty();
+            const taskIdValueObjs = taskIDs[targetVar][taskIdKey];
             taskIdValueObjs.forEach(taskIdValueObj => {
-                const selected = taskIdValueObj.value === initialTaskIds[taskIdKey] ? 'selected' : '';
+                const selected = taskIdValueObj.value === taskIds[taskIdKey] ? 'selected' : '';
                 const optionNode = `<option value="${taskIdValueObj.value}" ${selected} >${taskIdValueObj.text}</option>`;
                 $taskIdSelect.append(optionNode);
             });
@@ -569,10 +508,12 @@ const App = {
         // option, task ID, and interval selects
         $('#target_variable').on('change', function () {
             App.state.selected_target_var = this.value;
+            App.initializeTaskIDsUI(App.state.task_ids, App.state.selected_target_var,
+                App.state.task_ids[App.state.selected_target_var]);
             App.fetchDataUpdatePlot(true, true);
             App.showOptionsInURL();
         });
-        Object.keys(this.state.task_ids).forEach(function (taskIdKey) {
+        Object.keys(App.state.task_ids[App.state.selected_target_var]).forEach(function (taskIdKey) {
             const $taskIdSelect = $(`#${taskIdKey}`);  // created by _createUIElements()
             $taskIdSelect.on('change', function () {
                 App.fetchDataUpdatePlot(true, true);
@@ -702,10 +643,11 @@ const App = {
     // { "scenario_id": {"value": "2", "text": "scenario 2"},  "location": {"value": "48", "text": "Texas"} }
     selectedTaskIDs() {
         const theSelectedTaskIDs = {};  // return value. filled next
-        Object.keys(this.state.task_ids).forEach(taskIdKey => {
+        Object.keys(this.state.task_ids[this.state.selected_target_var]).forEach(taskIdKey => {
             const $taskIdSelect = $(`#${taskIdKey}`);  // created by _createUIElements()
             const selectedTaskIdValue = $taskIdSelect.val();
-            const taskIdObj = App.state.task_ids[taskIdKey].find(taskID => taskID['value'] === selectedTaskIdValue);
+            const taskIdObj = App.state.task_ids[this.state.selected_target_var][taskIdKey]
+                .find(taskID => taskID['value'] === selectedTaskIdValue);
             theSelectedTaskIDs[taskIdKey] = taskIdObj;
         });
         return theSelectedTaskIDs;
@@ -730,8 +672,8 @@ const App = {
     /**
      * Updates the plot, optionally first fetching data.
      *
-     * @param isFetchFirst true if should fetch before plotting. false if no fetch
-     * @param isFetchCurrentTruth applies if isFetchFirst: controls whether current truth is fetched in addition to
+     * @param isFetchFirst true if the function should fetch before plotting. false if no fetch
+     * @param isFetchCurrentTruth applies if `isFetchFirst`: controls whether current truth is fetched in addition to
      *   as_of truth and forecasts. ignored if not isFetchFirst
      */
     fetchDataUpdatePlot(isFetchFirst, isFetchCurrentTruth) {
