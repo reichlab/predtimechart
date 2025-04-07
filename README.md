@@ -107,7 +107,7 @@ The component is initialized by a JavaScript object with the following keys and 
     - 'value': used as the main value that's passed around for the target
     - 'text': human-readable text
     - 'plot_text': plot text (purpose: TBD)
-- `task_ids`: `object` defining the _tasks_ in the data as described in `_fetchData`'s `taskIDs` arg above. The object contains a `string` key for each task ID variable, the value of which is an `array` of `object`s defining possible values. The keys should consist of only ASCII letters, digits, `_`, and `-`, and should start with a letter. (Note that, for display, the IDs are split on `_` and `-` and the title-cased.) The objects have two keys:
+- `task_ids`: `object` defining the _tasks_ in the data as described in `_fetchData`'s `taskIDs` arg above. Like `available_as_ofs`, the keys must match `target_variables` `value`. Each of those is an object that contains a `string` key for each task ID variable, the value of which is an `array` of `object`s defining possible values. The keys should consist of only ASCII letters, digits, `_`, and `-`, and should start with a letter. (Note that, for display, the IDs are split on `_` and `-` and the title-cased.) The objects have two keys:
     - `value`: used as the main value that's passed around for the task ID
     - `text`: human-readable text
 
@@ -174,7 +174,7 @@ Here's a real-world example from the [COVID-19 Forecast Hub](https://covid19fore
 
 # fetchData data format
 
-As described above, the `fetchData(isForecast, targetKey, unitAbbrev, referenceDate)` function passed to `App.initialize()` is responsible for returning truth and forecast data as directed by the `isForecast` arg. It uses the other three args to retrieve and return the requested data. The data is in the following formats.
+As described above, the `fetchData(isForecast, targetKey, taskIDs, referenceDate)` function passed to `App.initialize()` is responsible for returning truth and forecast data as directed by the `isForecast` arg. It uses the other three args to retrieve and return the requested data. The data is in the following formats.
 
 
 ## fetchData truth data format
@@ -235,8 +235,15 @@ We use [QUnit](https://qunitjs.com/) for our unit tests. To run the tests, execu
 
 ## Trying the app locally
 
-We've included `src/index.html` as a simple example of the app in action. The file hard-codes truth and forecast data, and has ata for only one `referenceDate`, but can be useful during development. To use it, follow the below packaging step, serve `dist/index.html` from your development environment (trying to open it directly from the filesystem will cause a [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS/Errors/CORSRequestNotHttp) error), and then view it in your browser.
+We've included `src/index.html` as a simple example of the app in action. The file hard-codes truth and forecast data, and has ata for only one `referenceDate`, but can be useful during development. To use it, follow the below packaging step and then serve `dist/index.html` from your development environment via these commands:
 
+> Note: You can't open the file directly in your browser due to CORS restrictions (e.g., "CORS request not http" in [Firefox](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS/Errors/CORSRequestNotHttp)).
+
+```bash
+ cd <this_repo>/dist
+ python3 -m http.server --cgi 8080
+ # visit: http://127.0.0.1:8080
+ ```
 
 ## Updating `/src/schema.json`
 

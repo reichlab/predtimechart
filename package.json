@@ -1,6 +1,6 @@
 {
-  "name": "ajv-play",
-  "version": "1.0.0",
+  "name": "predtimechart",
+  "version": "3.0.0",
   "type": "module",
   "devDependencies": {
     "ajv": "^8.12.0",

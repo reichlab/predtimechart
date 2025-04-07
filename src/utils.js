@@ -40,6 +40,52 @@ function _parseYYYYMMDDStr(year) {
 }
 
 
+/**
+ * App.initialize() helper that returns an object like that function's `options` object, but filled with values from
+ * the current window location. Does not check for missing parameters.
+ *
+ * @param {Object} taskIDs - as passed to initialize()'s options['task_ids']
+ * @param {String} windowLocationSearch - ala `window.location.search`
+ * @returns {Object}
+ */
+function getOptionsFromURL(taskIDs, windowLocationSearch) {
+    const options = {};
+    const searchParams = new URLSearchParams(windowLocationSearch)
+    if (searchParams.get('as_of')) {
+        options['initial_as_of'] = searchParams.get('as_of');
+    }
+    if (searchParams.get('interval')) {
+        options['initial_interval'] = searchParams.get('interval');
+    }
+    if (searchParams.get('target_var')) {
+        options['initial_target_var'] = searchParams.get('target_var');
+    }
+    if (searchParams.get('model')) {  // at least one
+        options['initial_checked_models'] = searchParams.getAll('model');
+    }
+    if (searchParams.get('xaxis_range')) {
+        options['initial_xaxis_range'] = searchParams.getAll('xaxis_range');
+    }
+    if (searchParams.get('yaxis_range')) {
+        options['initial_yaxis_range'] = searchParams.getAll('yaxis_range');
+    }
+
+    if (('initial_target_var' in options) && (options['initial_target_var'] in taskIDs)) {
+        const initial_task_ids = {}; // NB: these are `value`s, not `text`s
+        Object.keys(taskIDs[options['initial_target_var']]).forEach(function (taskIdKey) {
+            if (searchParams.get(taskIdKey)) {
+                initial_task_ids[taskIdKey] = searchParams.get(taskIdKey);
+            }
+        });
+        if (Object.keys(initial_task_ids).length !== 0) {
+            options['initial_task_ids'] = initial_task_ids;
+        }
+    }
+
+    return options;
+}
+
+
 // export
 
-export {closestYear}
+export {closestYear, getOptionsFromURL}
