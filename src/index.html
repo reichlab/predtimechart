@@ -24,6 +24,7 @@
 </div>
 <script type="module">
     import App from './predtimechart.bundle.js';  // hard-coded from webpack.config.cjs `output.filename`
+    document.predtimechart = App;  // for debugging
 
     const covid19ForecastsVizTestOptions = {
         "available_as_ofs": {
@@ -37,7 +38,7 @@
         "initial_interval": "95%",
         "initial_target_var": "week_ahead_incident_deaths",
         "initial_task_ids": {"scenario_id": "1", "location": "48"},
-        "initial_xaxis_range": null,
+        "initial_xaxis_range": ["2022-02-01", "2022-02-15"],
         "initial_yaxis_range": null,
         "intervals": ["0%", "50%", "95%"],
         "models": ["COVIDhub-ensemble", "COVIDhub-baseline", "Empty-model"],
