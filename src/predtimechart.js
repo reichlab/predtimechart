@@ -143,7 +143,7 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
  * @param {String} message
  */
 function showDialog(title, message) {
-    console.log(`flashMessage(): ${message}`);
+    console.info(`flashMessage(): ${message}`);
     const modal$ = $(`
         <div class="modal fade" id="showDialogModal" tabindex="-1" role="dialog" aria-labelledby="showDialogModalLabel" aria-hidden="true">
           <div class="modal-dialog" role="document">
@@ -677,6 +677,7 @@ const App = {
      *   as_of truth and forecasts. ignored if not isFetchFirst
      */
     fetchDataUpdatePlot(isFetchFirst, isFetchCurrentTruth) {
+        console.debug(`fetchDataUpdatePlot(${isFetchFirst}, ${isFetchCurrentTruth}): entered`);
         const isResetYLimit = isFetchCurrentTruth;  // passed to updatePlot(). fetching truth means we need to recalculate y limits
         if (isFetchFirst) {
             const promises = [this.fetchAsOfTruth(), this.fetchForecasts()];
@@ -749,36 +750,54 @@ const App = {
             layout = {title: {text: `No Visualization Data Found for ${this.state.selected_as_of_date}`}};
         }
 
-        // before updating the plot we store the xaxis and yaxis ranges so that we can relayout using them if need be.
-        // NB: the default xaxis.range seems to be [-1, 6] when updating for the first time (yaxis.range = [-1, 4]).
-        // there might be a better way to determine this.
-        let currXAxisRange;
-        let currYAxisRange;
-        let isXAxisRangeDefault;
-        let isYAxisRangeDefault;
-        if (plotyDiv.data.length !== 0) {  // we have data to plot. o/w plotyDiv.layout.* is undefined
+        // save current xaxis and yaxis ranges (if available) before updating the plot so that we can relayout() using
+        // them if need be. NB: the default xaxis.range seems to be [-1, 6] when updating for the first time
+        // (yaxis.range = [-1, 4]). there might be a better way to determine this.
+        let currXAxisRange, currYAxisRange, isXAxisRangeDefault, isYAxisRangeDefault;
+        const isExistingData = plotyDiv.data.length !== 0;
+        if (isExistingData) {  // o/w plotyDiv.layout.* is undefined
             currXAxisRange = plotyDiv.layout.xaxis.range;
             currYAxisRange = plotyDiv.layout.yaxis.range;
             isXAxisRangeDefault = ((currXAxisRange.length === 2) && (currXAxisRange[0] === -1) && (currXAxisRange[1] === 6));
             isYAxisRangeDefault = ((currYAxisRange.length === 2) && (currYAxisRange[0] === -1) && (currYAxisRange[1] === 4));
         }
-        Plotly.react(plotyDiv, data, layout);
-        if (plotyDiv.data.length !== 0) {  // we have data to plot. o/w plotyDiv.layout.* is undefined
+
+        // current xaxis and yaxis ranges are saved, so do the plot
+        Plotly.react(plotyDiv, data, layout);  // xaxis.range and yaxis.range are set next
+
+        // compute xaxis.range and yaxis.range, factoring in whether there's existing data (and therefore an existing
+        // layout) and then do relayout()
+        const relayoutUpdate = {};  // passed to relayout(). filled next
+        if (isExistingData) {
+            // above plotyDiv.layout.* is NOT undefined -> can use currXAxisRange, ...
             if (!isXAxisRangeDefault) {
-                Plotly.relayout(plotyDiv, 'xaxis.range', currXAxisRange);
+                relayoutUpdate['xaxis.range'] = currXAxisRange;
             } else if (this.state.initial_xaxis_range != null) {
-                Plotly.relayout(plotyDiv, 'xaxis.range', this.state.initial_xaxis_range);
+                relayoutUpdate['xaxis.range'] = this.state.initial_xaxis_range;
             }
 
             if (!isResetYLimit) {
                 if (!isYAxisRangeDefault) {
-                    Plotly.relayout(plotyDiv, 'yaxis.range', currYAxisRange);
+                    relayoutUpdate['yaxis.range'] = currYAxisRange;
                 } else if (this.state.initial_yaxis_range != null) {
-                    Plotly.relayout(plotyDiv, 'yaxis.range', this.state.initial_yaxis_range);
+                    relayoutUpdate['yaxis.range'] = this.state.initial_yaxis_range;
                 }
             }
+        } else {
+            // above plotyDiv.layout.* is undefined so set xaxis.range and yaxis.range to initial_xaxis_range and
+            // initial_yaxis_range if they're not null
+            if (this.state.initial_xaxis_range != null) {
+                relayoutUpdate['xaxis.range'] = this.state.initial_xaxis_range;
+            }
+
+            if (this.state.initial_yaxis_range != null) {
+                relayoutUpdate['yaxis.range'] = this.state.initial_yaxis_range;
+            }
         }
-        this.initializeDateRangePicker();  // b/c jquery binding is apparently lost with any Plotly.*() call
+        Plotly.relayout(plotyDiv, relayoutUpdate);
+
+        // call initializeDateRangePicker() b/c jquery binding is apparently lost with any Plotly.*() call
+        this.initializeDateRangePicker();
     },
     getPlotlyLayout() {
         if (this.state.target_variables.length === 0) {
