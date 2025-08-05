@@ -35,8 +35,8 @@ function _setSelectedTruths() {
     if (isAsOfTruthChecked) {
         selectedTruths.push('Target as of');
     }
-    this.state.selected_truth = selectedTruths;
-    this.fetchDataUpdatePlot(false, false);
+    App.state.selected_truth = selectedTruths;
+    App.fetchDataUpdatePlot(false, false);
 }
 
 
