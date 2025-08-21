@@ -100,10 +100,15 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
 
     // add model list controls
     $optionsDiv.append($(
-        '<button type="button" class="btn btn-sm rounded-pill" id="forecastViz_shuffle" style="float: right;">\n' +
-        '    Shuffle Colours</button>\n' +
-        '<label class="forecastViz_label" for="forecastViz_all">Select Models:</label>\n' +
-        '<input type="checkbox" id="forecastViz_all">'));
+        '<div class="mt-2">\n' +
+        '    <form class="d-flex flex-row align-items-center flex-wrap">\n' +
+        '        <label class="forecastViz_label me-2" for="forecastViz_all">Select Models:</label>\n' +
+        '        <input type="checkbox" id="forecastViz_all">\n' +
+        '            <button type="button" class="btn btn-light btn-sm rounded-pill ms-auto" id="forecastViz_shuffle">\n' +
+        '                Shuffle Colours\n' +
+        '            </button>\n' +
+        '    </form>\n' +
+        '</div>'));
 
     // add the model list itself
     $optionsDiv.append($('<div id="forecastViz_select_model"></div>'));
