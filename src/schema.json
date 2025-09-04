@@ -137,6 +137,18 @@
           }
         }
       }
+    },
+    "model_urls": {
+      "description": "an optional `object` that maps names in `models` to a URL string",
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        "^.*$": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "required": ["available_as_ofs", "current_date", "initial_as_of", "initial_checked_models", "initial_interval", "initial_target_var", "initial_task_ids", "intervals", "models", "target_variables", "task_ids"]
