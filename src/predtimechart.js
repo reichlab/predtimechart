@@ -11,15 +11,12 @@ import _validateOptions from './validation.js';
 //
 
 // `updateModelsList()` helper
-function _selectModelDiv(model, modelColor, isEnabled, isChecked) {
-    const checked = isChecked ? 'checked' : '';
-    return `<div class="form-group form-check"
-                 style="margin-bottom: 0${!isEnabled ? '; color: lightgrey' : ''}">
-                <label>
-                    <input type="checkbox" id="${model}" class="model-check" ${checked}>
-                    &nbsp;${model}
-                    &nbsp;<span class="forecastViz_dot" style="background-color: ${modelColor}; "></span>
-                </label>
+function _selectModelDiv(model, modelUrl, modelColor, isEnabled, isChecked) {
+    const modelLink = `<a href="${modelUrl}" role="button" target="_blank" title="Click to open metdata for ${model} (new window)">${model}</a>`;
+    return `<div class="form-group form-check" style="margin-bottom: 0${!isEnabled ? '; color: lightgrey' : ''}">
+                <input type="checkbox" id="${model}" class="model-check" ${isChecked ? 'checked' : ''} ${isEnabled ? '' : 'disabled'}>
+                <span id="${model}_link">${isEnabled && (modelUrl !== null) ? modelLink : model}</span>
+                <span class="forecastViz_dot" style="background-color: ${modelColor}; "></span>
             </div>`;
 }
 
@@ -197,6 +194,7 @@ const App = {
         available_as_ofs: {},
         current_date: "",
         models: [],
+        modelUrls: {},
         disclaimer: "",
 
         // Dynamic/updated data, used to track 2 categories:
@@ -281,6 +279,7 @@ const App = {
         this.state.available_as_ofs = options['available_as_ofs'];
         this.state.current_date = options['current_date'];
         this.state.models = options['models'];
+        this.state.modelUrls = options.hasOwnProperty('model_urls') ? options['model_urls'] : {};
         this.state.disclaimer = options['disclaimer'];  // undefined if not present
         this.state.colors = Array(parseInt(this.state.models.length / 10, 10) + 1).fill([
             '#0d0887',
@@ -491,9 +490,10 @@ const App = {
                 return App.state.forecasts.hasOwnProperty(model);
             })
             .forEach(function (model) {
+                const modelUrl = model in thisState.modelUrls ? thisState.modelUrls[model] : null;
                 const isChecked = (thisState.selected_models.indexOf(model) > -1);
                 const modelIdx = thisState.models.indexOf(model);
-                $selectModelDiv.append(_selectModelDiv(model, thisState.colors[modelIdx], true, isChecked));
+                $selectModelDiv.append(_selectModelDiv(model, modelUrl, thisState.colors[modelIdx], true, isChecked));
             });
 
         // 2. add models without forecasts
@@ -502,8 +502,9 @@ const App = {
                 return !App.state.forecasts.hasOwnProperty(model);
             })
             .forEach(function (model) {
+                const modelUrl = model in thisState.modelUrls ? thisState.modelUrls[model] : null;
                 const isChecked = (thisState.selected_models.indexOf(model) > -1);
-                $selectModelDiv.append(_selectModelDiv(model, 'grey', false, isChecked));
+                $selectModelDiv.append(_selectModelDiv(model, modelUrl, 'grey', false, isChecked));
             });
 
         // re-wire up model checkboxes

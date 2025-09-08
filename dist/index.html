@@ -17,6 +17,10 @@
         "initial_yaxis_range": null,
         "intervals": ["0%", "50%", "95%"],
         "models": ["COVIDhub-ensemble", "COVIDhub-baseline", "Empty-model"],
+        "model_urls": {
+            "COVIDhub-ensemble": "https://github.com/CDCgov/covid19-forecast-hub/blob/main/model-metadata/CovidHub-ensemble.yaml",
+            "COVIDhub-baseline": "https://github.com/CDCgov/covid19-forecast-hub/blob/main/model-metadata/CovidHub-baseline.yaml",
+            "Empty-model": "https://example.com/Empty-model"},
         "target_variables": [
             {
                 "value": "week_ahead_incident_deaths",

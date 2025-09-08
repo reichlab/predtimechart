@@ -106,6 +106,7 @@ The component is initialized by a JavaScript object with the following keys and 
 - `initial_yaxis_range`: `array` of two values (format depends on outcome variable) that specify the initial yaxis range to use. To not initialize the range, pass `null` for its value
 - `intervals`: `array` of one or more integers between 0 and 100 inclusive, representing percentages (purpose: TBD)
 - `models`: `array` of model names (`string`s) that provide data
+- `model_urls`: `object` where the keys are the model names in `models` (`string`s) and the values are URLs to pages showing model information (`string`s)
 - `target_variables`: `array` of `object`s defining the target variables in the data. Each object contains three keys:
     - 'value': used as the main value that's passed around for the target
     - 'text': human-readable text
@@ -152,6 +153,10 @@ Here's a real-world example from the [COVID-19 Forecast Hub](https://covid19fore
     "COVIDhub-ensemble",
     "..."
   ],
+  "model_urls": {
+    "COVIDhub-baseline": "https://github.com/CDCgov/covid19-forecast-hub/blob/main/model-metadata/CovidHub-baseline.yaml",
+    "COVIDhub-ensemble": "https://github.com/CDCgov/covid19-forecast-hub/blob/main/model-metadata/CovidHub-ensemble.yaml"
+  },
   "target_variables": [
     {
       "value": "day_ahead_cumulative_deaths",
@@ -166,11 +171,13 @@ Here's a real-world example from the [COVID-19 Forecast Hub](https://covid19fore
     "..."
   ],
   "task_ids": {
-    "unit": [
-      {"value": "48", "text": "Texas"},
-      {"value": "US", "text": "US"},
-      "..."
-    ]
+    "week_ahead_incident_deaths": {
+      "unit": [
+        {"value": "48", "text": "Texas"},
+        {"value": "US", "text": "US"},
+        "..."
+      ]
+    }
   }
 }
 ```

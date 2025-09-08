@@ -76,6 +76,15 @@ function _validateOptions(options) {
         }
     });
 
+    // case: model_urls in models
+    if (options.hasOwnProperty('model_urls')) {
+        Object.keys(options['model_urls']).forEach(model => {
+            if (!models.includes(model)) {
+                throw `model_urls model not in models: ${model}`;
+            }
+        });
+    }
+
     // case: initial_interval in intervals
     const initialInterval = options['initial_interval'];
     if (!options['intervals'].includes(initialInterval)) {

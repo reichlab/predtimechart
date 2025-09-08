@@ -73,16 +73,16 @@ const fluMetrocastOptions = {
                 {"text": "Manhattan", "value": "Manhattan"},
                 {"text": "Queens", "value": "Queens"},
                 {"text": "Staten Island", "value": "Staten Island"}
-            ],
-            "Flu ED visits pct": {
-                "location": [
-                    {"text": "Austin", "value": "Austin"},
-                    {"text": "Houston", "value": "Houston"},
-                    {"text": "Dallas", "value": "Dallas"},
-                    {"text": "El Paso", "value": "El Paso"},
-                    {"text": "San Antonio", "value": "San Antonio"}
-                ]
-            }
+            ]
+        },
+        "Flu ED visits pct": {
+            "location": [
+                {"text": "Austin", "value": "Austin"},
+                {"text": "Houston", "value": "Houston"},
+                {"text": "Dallas", "value": "Dallas"},
+                {"text": "El Paso", "value": "El Paso"},
+                {"text": "San Antonio", "value": "San Antonio"}
+            ]
         }
     }
 };
@@ -124,24 +124,34 @@ test('options object missing', assert => {
 
 
 test('options object blue sky covid', assert => {
-    // per https://stackoverflow.com/questions/9822400/how-to-assert-that-a-function-does-not-raise-an-exception
-
     // case: description present
-    App.initialize('qunit-fixture', null, true, covid19ForecastsVizTestOptions);
-    assert.ok(true, "no Error raised");
+    let actValue = App.initialize('qunit-fixture', null, true, covid19ForecastsVizTestOptions);
+    assert.true(actValue === null);  // no error
 
     // case: description missing
     const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
     delete optionsCopy['disclaimer'];
-    App.initialize('qunit-fixture', null, true, optionsCopy);
-    assert.ok(true, "no Error raised");
+    actValue = App.initialize('qunit-fixture', null, true, optionsCopy);
+    assert.true(actValue === null);  // no error
 });
 
 
 test('options object blue sky flu-metrocast', assert => {
-    // per https://stackoverflow.com/questions/9822400/how-to-assert-that-a-function-does-not-raise-an-exception
-    App.initialize('qunit-fixture', null, true, fluMetrocastOptions);
-    assert.ok(true, "no Error raised");
+    const actValue = App.initialize('qunit-fixture', null, true, fluMetrocastOptions);
+    assert.true(actValue === null);  // no error
+});
+
+
+test('options object blue sky plus model_urls flu-metrocast', assert => {
+    const optionsCopy = structuredClone(fluMetrocastOptions);
+    optionsCopy['model_urls'] = {
+        'epiENGAGE-Copycat': 'https://example.com/',
+        'epiENGAGE-GBQR': 'https://example.com/',
+        'epiENGAGE-INFLAenza': 'https://example.com/',
+        'epiforecasts-dyngam': 'https://example.com/'
+    };
+    const actValue = App.initialize('qunit-fixture', null, true, optionsCopy);
+    assert.true(actValue === null);  // no error
 });
 
 
@@ -168,6 +178,7 @@ test('available_as_ofs keys in target_variables value', assert => {
     assert.true(regExp.test(actValue));
 });
 
+
 test('task_ids keys in target_variables value', assert => {
     const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
     optionsCopy['task_ids'] = {"bad key": {"unit": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]}};
@@ -193,6 +204,16 @@ test('initial_checked_models in models', assert => {
     optionsCopy['initial_checked_models'] = [null];
 
     const regExp = /initial_checked_models model not in models/;
+    const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
+    assert.true(regExp.test(actValue));
+});
+
+
+test('model_urls in models', assert => {
+    const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    optionsCopy['model_urls'] = {'invalid-model': 'https://example.com/'};
+
+    const regExp = /model_urls model not in models/;
     const actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     assert.true(regExp.test(actValue));
 });
