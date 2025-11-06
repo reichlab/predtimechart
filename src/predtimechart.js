@@ -12,11 +12,13 @@ import _validateOptions from './validation.js';
 
 // `updateModelsList()` helper
 function _selectModelDiv(model, modelUrl, modelColor, isEnabled, isChecked) {
-    const modelLink = `<a href="${modelUrl}" role="button" target="_blank" title="Click to open metdata for ${model} (new window)">${model}</a>`;
+    const iconLink = (isEnabled && modelUrl) ?
+        `<a href="${modelUrl}" target="_blank" title="Click to open metadata for ${model} (new window)" class="ms-1"><i class="bi bi-box-arrow-up-right"></i></a>` : '';
     return `<div class="form-group form-check" style="margin-bottom: 0${!isEnabled ? '; color: lightgrey' : ''}">
                 <input type="checkbox" id="${model}" class="model-check" ${isChecked ? 'checked' : ''} ${isEnabled ? '' : 'disabled'}>
-                <span id="${model}_link">${isEnabled && (modelUrl !== null) ? modelLink : model}</span>
-                <span class="forecastViz_dot" style="background-color: ${modelColor}; "></span>
+                <label for="${model}" class="form-check-label">${model}</label>
+                <span class="forecastViz_dot" style="background-color: ${modelColor};"></span>
+                ${iconLink}
             </div>`;
 }
 
