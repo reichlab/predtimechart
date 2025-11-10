@@ -18,7 +18,7 @@ See the "HTML file example" section below for an example, and see the "JavaScrip
 
 In your HTML file, load the required CSS and JavaScript files:
 
-1. In the `<head>`, load Bootstrap 4 and other required library files:
+1. In the `<head>`, load Bootstrap 5 and other required library files:
 
 ```html
 <!-- jquery -->
@@ -30,6 +30,11 @@ In your HTML file, load the required CSS and JavaScript files:
         crossorigin="anonymous"></script>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet"
       integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+      integrity="sha384-CK2SzKma4jA5H/MXDUU7i1TqZlCFaD4T01vtyDFvPlD97JQyS+IsSh1nI2EFbpyk"
+      crossorigin="anonymous">
 
 <!-- https://www.daterangepicker.com/ -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
