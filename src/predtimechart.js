@@ -284,16 +284,17 @@ const App = {
         this.state.modelUrls = options.hasOwnProperty('model_urls') ? options['model_urls'] : {};
         this.state.disclaimer = options['disclaimer'];  // undefined if not present
         this.state.colors = Array(parseInt(this.state.models.length / 10, 10) + 1).fill([
-            '#0d0887',
-            '#46039f',
-            '#7201a8',
-            '#9c179e',
-            '#bd3786',
-            '#d8576b',
-            '#ed7953',
-            '#fb9f3a',
-            '#fdca26',
-            '#f0f921'
+            // Tableau 10 color palette
+            '#4E79A7',  // Blue
+            '#F28E2B',  // Orange
+            '#E15759',  // Red
+            '#76B7B2',  // Teal
+            '#59A14F',  // Green
+            '#EDC948',  // Yellow
+            '#B07AA1',  // Purple
+            '#FF9DA7',  // Pink
+            '#9C755F',  // Brown
+            '#BAB0AC'   // Gray
         ]).flat()
         this.state.initial_xaxis_range = options.hasOwnProperty('initial_xaxis_range') ? options['initial_xaxis_range'] : null;
         this.state.initial_yaxis_range = options.hasOwnProperty('initial_yaxis_range') ? options['initial_yaxis_range'] : null;
