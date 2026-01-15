@@ -830,7 +830,7 @@ const App = {
                 rangeslider: {},
             },
             yaxis: {
-                title: {text: variable, hoverformat: '.2f'},
+                title: {text: variable},
                 fixedrange: false
             }
         }
@@ -845,7 +845,11 @@ const App = {
                 type: 'scatter',
                 mode: 'lines',
                 name: 'Current Target',
-                marker: {color: 'darkgray'}
+                marker: {color: 'darkgray'},
+                hovertemplate: `<b>Current Target</b><br>` +
+                    `Date: %{x}<br>` +
+                    `Value: %{y:,.2~f}` +
+                    `<extra></extra>`
             })
         }
         if (state.selected_truth.includes('Target as of') && Object.keys(state.as_of_truth).length !== 0) {
@@ -856,7 +860,11 @@ const App = {
                 mode: 'lines',
                 opacity: 0.5,
                 name: `Target as of ${state.selected_as_of_date}`,
-                marker: {color: 'black'}
+                marker: {color: 'black'},
+                hovertemplate: `<b>Target as of ${state.selected_as_of_date}</b><br>` +
+                    `Date: %{x}<br>` +
+                    `Value: %{y:,.2~f}` +
+                    `<extra></extra>`
             })
         }
 
@@ -913,7 +921,6 @@ const App = {
                         mode: 'lines',
                         type: 'scatter',
                         name: model,
-                        hovermode: false,
                         opacity: 0.7,
                         line: {color: state.colors[index]},
                         hoverinfo: 'none'
@@ -933,8 +940,39 @@ const App = {
                     const is_hosp = state.selected_target_var === 'hosp'
                     const mode = is_hosp ? 'lines' : 'lines+markers'
                     const model_forecasts = state.forecasts[model]
-                    let upper_quantile
+
+                    // determine quantile keys based on selected interval
                     let lower_quantile
+                    let upper_quantile
+                    let hasInterval = true
+                    if (state.selected_interval === '50%') {
+                        lower_quantile = 'q0.25'
+                        upper_quantile = 'q0.75'
+                    } else if (state.selected_interval === '95%') {
+                        lower_quantile = 'q0.025'
+                        upper_quantile = 'q0.975'
+                    } else {
+                        hasInterval = false
+                    }
+
+                    // build customdata and hovertemplate for tooltip
+                    const customdata = hasInterval
+                        ? model_forecasts.target_end_date.map((_, i) => [
+                            model_forecasts[lower_quantile][i],
+                            model_forecasts[upper_quantile][i]
+                        ])
+                        : null
+                    const hovertemplate = hasInterval
+                        ? `<b>${model}</b><br>` +
+                          `Date: %{x}<br>` +
+                          `Value: %{y:,.2~f}<br>` +
+                          `${state.selected_interval} PI: [%{customdata[0]:,.2~f}, %{customdata[1]:,.2~f}]` +
+                          `<extra></extra>`
+                        : `<b>${model}</b><br>` +
+                          `Date: %{x}<br>` +
+                          `Value: %{y:,.2~f}` +
+                          `<extra></extra>`
+
                     const plot_line = {
                         // point forecast
                         x: model_forecasts.target_end_date,
@@ -943,16 +981,12 @@ const App = {
                         name: model,
                         opacity: 0.7,
                         mode,
-                        line: {color: state.colors[index]}
+                        line: {color: state.colors[index]},
+                        customdata,
+                        hovertemplate
                     }
 
-                    if (state.selected_interval === '50%') {
-                        lower_quantile = 'q0.25'
-                        upper_quantile = 'q0.75'
-                    } else if (state.selected_interval === '95%') {
-                        lower_quantile = 'q0.025'
-                        upper_quantile = 'q0.975'
-                    } else {
+                    if (!hasInterval) {
                         return [plot_line]
                     }
 
