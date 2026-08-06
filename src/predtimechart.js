@@ -170,6 +170,24 @@ function showDialog(title, message) {
 
 
 //
+// interval support
+//
+
+/**
+ * Maps the `intervals` option values that we can plot to the [lower, upper] forecast data keys backing them. A central
+ * interval of width W uses the quantile levels (1 - W) / 2 and 1 - (1 - W) / 2, so e.g. 80% -> 0.1 and 0.9. '0%' is the
+ * degenerate case - it has no bounds, so only the median line is plotted, which is also what happens for any interval
+ * that's not a key here. NB: the counterpart to this table on the data generation side is
+ * hub-dashboard-predtimechart's `intervals.py`.
+ */
+const INTERVAL_TO_QUANTILE_KEYS = {
+    '50%': ['q0.25', 'q0.75'],
+    '80%': ['q0.1', 'q0.9'],
+    '95%': ['q0.025', 'q0.975'],
+};
+
+
+//
 // App
 //
 
@@ -876,38 +894,28 @@ const App = {
                     const index = state.models.indexOf(model)
                     const model_forecasts = state.forecasts[model]
                     const date = model_forecasts.target_end_date
-                    const lq1 = model_forecasts['q0.025']
-                    const lq2 = model_forecasts['q0.25']
-                    const mid = model_forecasts['q0.5']
-                    const uq1 = model_forecasts['q0.75']
-                    const uq2 = model_forecasts['q0.975']
 
-                    // 1-3: sort model forecasts in order of target end date
+                    // 1-3: sort model forecasts in order of target end date. NB: we sort *every* quantile key that's
+                    // present rather than a fixed set, so that optional ones (e.g., the q0.1/q0.9 backing the 80%
+                    // interval) stay aligned with target_end_date
+                    const quantileKeys = Object.keys(model_forecasts).filter((key) => key !== 'target_end_date')
+
                     // 1) combine the arrays:
-                    const list = []
-                    for (let j = 0; j < date.length; j++) {
-                        list.push({
-                            date: date[j],
-                            lq1: lq1[j],
-                            lq2: lq2[j],
-                            uq1: uq1[j],
-                            uq2: uq2[j],
-                            mid: mid[j]
-                        })
-                    }
+                    const list = date.map((dateStr, j) => ({
+                        date: dateStr,
+                        quantileValues: quantileKeys.map((quantileKey) => model_forecasts[quantileKey][j])
+                    }))
 
                     // 2) sort:
                     list.sort((a, b) => (moment(a.date).isBefore(b.date) ? -1 : 1))
 
                     // 3) separate them back out:
-                    for (let k = 0; k < list.length; k++) {
-                        model_forecasts.target_end_date[k] = list[k].date
-                        model_forecasts['q0.025'][k] = list[k].lq1
-                        model_forecasts['q0.25'][k] = list[k].lq2
-                        model_forecasts['q0.5'][k] = list[k].mid
-                        model_forecasts['q0.75'][k] = list[k].uq1
-                        model_forecasts['q0.975'][k] = list[k].uq2
-                    }
+                    list.forEach((item, k) => {
+                        model_forecasts.target_end_date[k] = item.date
+                        quantileKeys.forEach((quantileKey, q) => {
+                            model_forecasts[quantileKey][k] = item.quantileValues[q]
+                        })
+                    })
 
                     const x = [];
                     x.push(model_forecasts.target_end_date.slice(0)[0]);
@@ -941,19 +949,13 @@ const App = {
                     const mode = is_hosp ? 'lines' : 'lines+markers'
                     const model_forecasts = state.forecasts[model]
 
-                    // determine quantile keys based on selected interval
-                    let lower_quantile
-                    let upper_quantile
-                    let hasInterval = true
-                    if (state.selected_interval === '50%') {
-                        lower_quantile = 'q0.25'
-                        upper_quantile = 'q0.75'
-                    } else if (state.selected_interval === '95%') {
-                        lower_quantile = 'q0.025'
-                        upper_quantile = 'q0.975'
-                    } else {
-                        hasInterval = false
-                    }
+                    // determine the quantile keys backing the selected interval. we plot a band only if the selected
+                    // interval is one we know how to map AND this model actually submitted both backing quantiles -
+                    // e.g., a model that didn't submit q0.1/q0.9 gets no 80% band, same as the '0%' option
+                    const [lower_quantile, upper_quantile] = INTERVAL_TO_QUANTILE_KEYS[state.selected_interval] ?? []
+                    const hasInterval = (lower_quantile !== undefined) &&
+                        (model_forecasts[lower_quantile] !== undefined) &&
+                        (model_forecasts[upper_quantile] !== undefined)
 
                     // build customdata and hovertemplate for tooltip
                     const customdata = hasInterval
@@ -1002,7 +1004,7 @@ const App = {
                     return [
                         plot_line,
                         {
-                            // interval forecast -- currently fixed at 50%
+                            // interval forecast -- the band for `state.selected_interval`
                             x: [].concat(x, x.slice().reverse()),
                             y: [].concat(y1, y2.slice().reverse()),
                             fill: 'toself',

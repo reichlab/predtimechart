@@ -71,7 +71,7 @@
       }
     },
     "intervals": {
-      "description": "`array` of one or more strings of the format '<integer>%' between '0%' and '100%' inclusive, representing percentages. Currently only '50%' and '95%' are used (purpose: TBD)",
+      "description": "`array` of one or more prediction interval widths to offer, each a string of the form '<integer>%' from '0%' to '99%' (no zero padding, and '100%' is not accepted). '50%', '80%', and '95%' are plotted as bands (from the q0.25/q0.75, q0.1/q0.9, and q0.025/q0.975 forecast data keys respectively). '0%' plots the median line alone, as does any other width, since we have no quantile keys to map it to",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
