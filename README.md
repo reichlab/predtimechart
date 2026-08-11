@@ -109,7 +109,7 @@ The component is initialized by a JavaScript object with the following keys and 
 - `initial_task_ids`:  an `object` to use for the initial plot. Its format is identical to `_fetchData()`'s `taskIDs` arg above.
 - `initial_xaxis_range`: `array` of two dates in 'YYYY-MM-DD' format that specify the initial xaxis range to use. To not initialize the range, pass `null` for its value
 - `initial_yaxis_range`: `array` of two values (format depends on outcome variable) that specify the initial yaxis range to use. To not initialize the range, pass `null` for its value
-- `intervals`: `array` of one or more integers between 0 and 100 inclusive, representing percentages (purpose: TBD)
+- `intervals`: `array` of one or more prediction interval widths to offer in the Interval dropdown, each a string of the form `'<integer>%'` from `'0%'` to `'99%'` (no zero padding, and `'100%'` is not accepted). `'50%'`, `'80%'`, and `'95%'` are plotted as shaded bands, built from the `q0.25`/`q0.75`, `q0.1`/`q0.9`, and `q0.025`/`q0.975` forecast data keys respectively. `'0%'` plots the median line alone, as does any other width, since we have no quantile keys to map it to. A width is also skipped for any model whose forecast data is missing its two backing quantiles — so a hub that doesn't submit `q0.1`/`q0.9` should simply omit `'80%'` here.
 - `models`: `array` of model names (`string`s) that provide data
 - `model_urls`: `object` where the keys are the model names in `models` (`string`s) and the values are URLs to pages showing model information (`string`s)
 - `target_variables`: `array` of `object`s defining the target variables in the data. Each object contains three keys:
@@ -152,7 +152,7 @@ Here's a real-world example from the [COVID-19 Forecast Hub](https://covid19fore
   "initial_task_ids": {"unit": "48"},
   "initial_xaxis_range": null,
   "initial_yaxis_range": null,
-  "intervals": ["0%", "50%", "95%"],
+  "intervals": ["0%", "50%", "80%", "95%"],
   "models": [
     "COVIDhub-baseline",
     "COVIDhub-ensemble",
@@ -205,24 +205,28 @@ Truth data is represented as an `object` with x/y pairs represented as columns, 
 
 ## fetchData forecasts data format
 
-Forecast data is an `object` with one entry for each model in the options object's `models`, each of which is in turn an `object` with entries for target end date of the forecast and the quantiles required to use to display point predictions and 50% or 95% prediction intervals. For example:
+Forecast data is an `object` with one entry for each model in the options object's `models`, each of which is in turn an `object` with entries for target end date of the forecast and the quantiles required to display point predictions and prediction intervals. `q0.5` gives the point prediction, and each interval width in the options object's `intervals` is drawn from its two backing quantiles as documented there. The `q0.1` and `q0.9` entries backing the `'80%'` interval are optional; a model that omits them simply gets no `'80%'` band. For example:
 
 ```json
 {
   "UChicagoCHATTOPADHYAY-UnIT": {
     "target_end_date": ["2021-09-11", "2021-09-18"],
     "q0.025": [1150165.71, 1176055.78],
+    "q0.1": [1150793.36, 1177824.19],
     "q0.25": [1151044.42, 1178626.67],
     "q0.5": [1151438.21, 1179605.9],
     "q0.75": [1152121.55, 1180758.16],
+    "q0.9": [1152583.94, 1181790.27],
     "q0.975": [1152907.55, 1182505.14]
   },
   "USC-SI_kJalpha": {
     "target_end_date": ["2021-09-11", "2021-09-18"],
     "q0.025": [941239.7761, 775112.557],
+    "q0.1": [988431.0294, 856894.311],
     "q0.25": [1010616.1863, 896160.705],
     "q0.5": [1149400.162, 1137280.4614],
     "q0.75": [1313447.0159, 1461013.716],
+    "q0.9": [1398215.4382, 1637168.583],
     "q0.975": [1456851.692, 1771312.0932]
   },
   "...": "..."

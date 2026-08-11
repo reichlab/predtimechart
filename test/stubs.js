@@ -35,6 +35,17 @@ const PlotlyStub = {
 global.Plotly = PlotlyStub;
 
 
+// minimal `moment` stub for the global that `index.html` loads from a CDN. only `isBefore()` is used (by
+// `getPlotlyData()`, to sort each model's forecasts by target end date)
+global.moment = function (dateStr) {
+    return {
+        isBefore(otherDateStr) {
+            return new Date(dateStr) < new Date(otherDateStr);
+        }
+    };
+};
+
+
 // patch for `initializeDateRangePicker()`
 $.fn.daterangepicker = function (...args) {
 };
