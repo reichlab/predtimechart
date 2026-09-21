@@ -40,6 +40,20 @@
       "description": "`intervals` value to use for the initial plot",
       "type": "string"
     },
+    "initial_season": {
+      "description": "`integer` specifying the season to plot initially, identified by the calendar year the season starts in - e.g., 2024 for the '2024-2025' season with the default August start. Only applies when `initial_season_mode` is true. Must be a season that the initial target variable's `available_as_ofs` dates fall in",
+      "type": "integer"
+    },
+    "initial_season_mode": {
+      "description": "`boolean` specifying whether season mode - which focuses the plot on one season, overlaying the others behind it - starts out on. Defaults to false",
+      "type": "boolean"
+    },
+    "initial_season_start_month": {
+      "description": "`integer` from 1 (January) through 12 (December) specifying the month a season starts in. A season runs from the first of that month through the day before the first of that month in the following year. Defaults to 8 (August)",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 12
+    },
     "initial_target_var": {
       "description": "`target_variables` `value` key to use for the initial plot",
       "type": "string"

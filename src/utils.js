@@ -69,6 +69,15 @@ function getOptionsFromURL(taskIDs, windowLocationSearch) {
     if (searchParams.get('yaxis_range')) {
         options['initial_yaxis_range'] = searchParams.getAll('yaxis_range');
     }
+    if (searchParams.get('season_mode')) {
+        options['initial_season_mode'] = _boolOrRaw(searchParams.get('season_mode'));
+    }
+    if (searchParams.get('season')) {
+        options['initial_season'] = _intOrRaw(searchParams.get('season'));
+    }
+    if (searchParams.get('season_start')) {
+        options['initial_season_start_month'] = _intOrRaw(searchParams.get('season_start'));
+    }
 
     if (('initial_target_var' in options) && (options['initial_target_var'] in taskIDs)) {
         const initial_task_ids = {}; // NB: these are `value`s, not `text`s
@@ -83,6 +92,38 @@ function getOptionsFromURL(taskIDs, windowLocationSearch) {
     }
 
     return options;
+}
+
+
+/**
+ * getOptionsFromURL() helper for the Number-valued params. NB: an unparseable value is returned unchanged rather
+ * than as a NaN so that schema validation rejects it and the caller shows its "Ignoring invalid URL parameter(s)"
+ * dialog, ala any other bad URL param. parseInt() alone is too lenient for that - it takes '8abc' as 8
+ *
+ * @param paramValue {String} a search param's value
+ * @returns {Number|String} `paramValue` as a Number, or unchanged if it isn't one
+ * @private
+ */
+function _intOrRaw(paramValue) {
+    const asInt = parseInt(paramValue, 10);
+    return (String(asInt) === paramValue) ? asInt : paramValue;
+}
+
+
+/**
+ * getOptionsFromURL() helper for the Boolean-valued params. Returns unparseable values unchanged, ala _intOrRaw()
+ *
+ * @param paramValue {String} a search param's value
+ * @returns {Boolean|String} `paramValue` as a Boolean, or unchanged if it's neither 'true' nor 'false'
+ * @private
+ */
+function _boolOrRaw(paramValue) {
+    if (paramValue === 'true') {
+        return true;
+    } else if (paramValue === 'false') {
+        return false;
+    }
+    return paramValue;
 }
 
 

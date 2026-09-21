@@ -252,3 +252,45 @@ test('initial_task_ids in task_ids value', assert => {
     actValue = App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
     assert.true(regExp.test(actValue));
 });
+
+
+test('initial_season_mode and initial_season_start_month are validated by the schema', assert => {
+    const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+
+    // case: valid
+    optionsCopy['initial_season_mode'] = true;
+    optionsCopy['initial_season_start_month'] = 1;
+    assert.equal(App.initialize('qunit-fixture', _fetchData, true, optionsCopy), null);
+
+    // case: initial_season_mode is not a Boolean, ala a bad URL param
+    optionsCopy['initial_season_mode'] = 'yes';
+    assert.true(/invalid options structure/.test(App.initialize('qunit-fixture', _fetchData, true, optionsCopy)));
+
+    // case: initial_season_start_month out of range
+    optionsCopy['initial_season_mode'] = true;
+    optionsCopy['initial_season_start_month'] = 13;
+    assert.true(/invalid options structure/.test(App.initialize('qunit-fixture', _fetchData, true, optionsCopy)));
+});
+
+
+test('initial_season in available_as_ofs seasons', assert => {
+    const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    optionsCopy['initial_season_mode'] = true;
+
+    // case: valid - the two as_ofs are both in the 2021-2022 season
+    optionsCopy['initial_season'] = 2021;
+    assert.equal(App.initialize('qunit-fixture', _fetchData, true, optionsCopy), null);
+
+    // case: a season that available_as_ofs doesn't reach
+    optionsCopy['initial_season'] = 2019;
+    const regExp = /initial_season not in available_as_ofs seasons/;
+    assert.true(regExp.test(App.initialize('qunit-fixture', _fetchData, true, optionsCopy)));
+
+    // case: initial_season_start_month moves the season boundaries, so 2022 (not 2021) is the valid one
+    optionsCopy['initial_season'] = 2022;
+    optionsCopy['initial_season_start_month'] = 1;  // January -> a season is a single calendar year
+    assert.equal(App.initialize('qunit-fixture', _fetchData, true, optionsCopy), null);
+
+    optionsCopy['initial_season'] = 2021;
+    assert.true(regExp.test(App.initialize('qunit-fixture', _fetchData, true, optionsCopy)));
+});

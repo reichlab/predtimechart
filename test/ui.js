@@ -1,5 +1,6 @@
 import './stubs.js'
 import App from '../src/predtimechart.js';
+import {getOptionsFromURL} from '../src/utils.js';
 
 const {test} = QUnit;
 
@@ -277,4 +278,134 @@ test('selecting a season moves to that season\'s last as_of date', assert => {
     assert.equal($("#asOfTruthDate").text(), 'Selected season, as of data 2021-06-04');
     assert.true($("#decrement_as_of").prop('disabled'), 'a one-as_of season has nowhere to navigate');
     assert.true($("#increment_as_of").prop('disabled'));
+});
+
+
+test('initialize() honors initial_season_mode and initial_season_start_month', assert => {
+    const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    optionsCopy['available_as_ofs'] = {"week_ahead_incident_deaths": ["2021-06-04", "2022-01-22", "2022-01-29"]};
+    optionsCopy['initial_season_mode'] = true;
+    optionsCopy['initial_season_start_month'] = 1;  // January -> a season is a single calendar year
+    App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
+
+    assert.true(App.state.is_season_mode);
+    assert.true($("#forecastViz_season_mode").prop('checked'), 'the checkbox matches the state');
+    assert.true(isDisplayed('forecastViz_season_controls'));
+    assert.true(isDisplayed('forecastViz_other_seasons_row'));
+    assert.equal(App.state.season_start_month, 1);
+    assert.equal($("#season_start").val(), '1');
+    assert.deepEqual($("#season option").map((idx, ele) => $(ele).text()).get(), ['2022', '2021'],
+        'single-year season names');
+    assert.equal(App.state.selected_season_start_year, 2022, 'the initial as_of date\'s season');
+    assert.equal(App.state.selected_as_of_date, '2022-01-29', 'the as_of date is untouched');
+});
+
+
+test('initialize() honors initial_season, moving to that season\'s first as_of date', assert => {
+    const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    optionsCopy['available_as_ofs'] = {"week_ahead_incident_deaths": ["2021-06-04", "2022-01-22", "2022-01-29"]};
+    optionsCopy['initial_season_mode'] = true;
+    optionsCopy['initial_season'] = 2021;  // the season initial_as_of is already in
+    App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
+
+    assert.equal(App.state.selected_season_start_year, 2021);
+    assert.equal(App.state.selected_as_of_date, '2022-01-22', 'the 2021-2022 season\'s first as_of date');
+    assert.equal($("#season").val(), '2021');
+
+    // case: a season other than initial_as_of's
+    optionsCopy['initial_season'] = 2020;
+    App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
+    assert.equal(App.state.selected_season_start_year, 2020);
+    assert.equal(App.state.selected_as_of_date, '2021-06-04', 'the only as_of in the 2020-2021 season');
+});
+
+
+test('initial_season is ignored when season mode is off', assert => {
+    const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    optionsCopy['available_as_ofs'] = {"week_ahead_incident_deaths": ["2021-06-04", "2022-01-22", "2022-01-29"]};
+    optionsCopy['initial_season'] = 2020;  // NB: no initial_season_mode
+    App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
+
+    assert.false(App.state.is_season_mode);
+    assert.equal(App.state.selected_as_of_date, '2022-01-29', 'the as_of date is untouched');
+    assert.equal(App.state.selected_season_start_year, 2021, 'the season is derived from the as_of date');
+});
+
+
+//
+// optionsURL() tests
+//
+
+QUnit.module('optionsURL()');
+
+
+test('optionsURL() includes the season params only when season mode is on', assert => {
+    initializeTwoSeasons();
+
+    // case: season mode off -> no season params at all
+    let searchParams = App.optionsURL().searchParams;
+    assert.false(searchParams.has('season_mode'));
+    assert.false(searchParams.has('season'));
+    assert.false(searchParams.has('season_start'));
+    assert.equal(searchParams.get('as_of'), '2022-01-29', 'the non-season params are unchanged');
+    assert.equal(searchParams.get('target_var'), 'week_ahead_incident_deaths');
+
+    // case: season mode on
+    setSeasonMode(true);
+    searchParams = App.optionsURL().searchParams;
+    assert.equal(searchParams.get('season_mode'), 'true');
+    assert.equal(searchParams.get('season'), '2021');
+    assert.equal(searchParams.get('season_start'), '8');
+
+    // case: the "Season start" SELECT is captured too
+    $("#season_start").val('1').trigger('change');
+    searchParams = App.optionsURL().searchParams;
+    assert.equal(searchParams.get('season_start'), '1');
+    assert.equal(searchParams.get('season'), '2022', 'January start -> 2022-01-29 is in the 2022 season');
+
+    // case: back off -> the season params go away again
+    setSeasonMode(false);
+    assert.false(App.optionsURL().searchParams.has('season_mode'));
+});
+
+
+test('optionsURL() season params round-trip through getOptionsFromURL()', assert => {
+    initializeTwoSeasons();
+    setSeasonMode(true);
+    $("#season").val('2020').trigger('change');
+
+    const urlOptions = getOptionsFromURL(App.state.task_ids, App.optionsURL().search);
+    assert.equal(urlOptions['initial_season_mode'], true);
+    assert.equal(urlOptions['initial_season'], 2020);
+    assert.equal(urlOptions['initial_season_start_month'], 8);
+    assert.equal(urlOptions['initial_as_of'], App.state.selected_as_of_date);
+});
+
+
+test('initialize() picks the season params up from window.location', assert => {
+    const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    optionsCopy['available_as_ofs'] = {"week_ahead_incident_deaths": ["2021-06-04", "2022-01-22", "2022-01-29"]};
+
+    // NB: replaceState() rather than a stub b/c initialize() reads `window.location.search` itself. we put it back
+    // afterwards so that the other tests (and files) still see a bare URL
+    const origUrl = window.location.href;
+    try {
+        window.history.replaceState(null, '', '?season_mode=true&season=2020&season_start=8');
+        App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
+
+        assert.true(App.state.is_season_mode, 'season mode came from the URL');
+        assert.true($("#forecastViz_season_mode").prop('checked'));
+        assert.equal(App.state.season_start_month, 8);
+        assert.equal(App.state.selected_season_start_year, 2020);
+        assert.equal(App.state.selected_as_of_date, '2021-06-04',
+            'no as_of in the URL -> the season wins and we move to its first as_of date');
+
+        // case: an as_of in the URL is more specific, so it wins and the season is derived from it
+        window.history.replaceState(null, '', '?season_mode=true&season=2020&season_start=8&as_of=2022-01-29');
+        App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
+        assert.equal(App.state.selected_as_of_date, '2022-01-29');
+        assert.equal(App.state.selected_season_start_year, 2021, 'the season of the URL\'s as_of date');
+    } finally {
+        window.history.replaceState(null, '', origUrl);
+    }
 });

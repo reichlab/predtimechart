@@ -84,6 +84,32 @@ test('getOptionsFromURL()', assert => {
 });
 
 
+test('getOptionsFromURL() season params', assert => {
+    const taskIDs = {};
+
+    // case: all three present
+    assert.deepEqual(getOptionsFromURL(taskIDs, '?season_mode=true&season=2024&season_start=1'), {
+        "initial_season_mode": true,
+        "initial_season": 2024,
+        "initial_season_start_month": 1
+    });
+
+    // case: season_mode=false
+    assert.deepEqual(getOptionsFromURL(taskIDs, '?season_mode=false'), {"initial_season_mode": false});
+
+    // case: none present
+    assert.deepEqual(getOptionsFromURL(taskIDs, '?as_of=2024-01-06'), {"initial_as_of": "2024-01-06"});
+
+    // case: unparseable values are passed through unchanged so that schema validation rejects them. NB: parseInt()
+    // alone would take '2024abc' as 2024 and '' as NaN
+    assert.deepEqual(getOptionsFromURL(taskIDs, '?season_mode=yes&season=2024abc&season_start=not a month'), {
+        "initial_season_mode": "yes",
+        "initial_season": "2024abc",
+        "initial_season_start_month": "not a month"
+    });
+});
+
+
 //
 // season tests. seasons run August 1 through July 31, e.g., season '2022-2023' is 2022-08-01 through 2023-07-31
 //

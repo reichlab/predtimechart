@@ -12,7 +12,9 @@ const html = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>
     '<div id="qunit-fixture"></div>\n' +
     '</body></html>';
 
-const jsdomWindow = new JSDOM(html).window;
+// NB: an explicit url (jsdom defaults to "about:blank", which has no origin) so that `App.optionsURL()` has
+// something to build a URL from. no search params, so `getOptionsFromURL()` still finds nothing
+const jsdomWindow = new JSDOM(html, {url: 'http://example.com/viz'}).window;
 global.window = jsdomWindow;
 global.document = jsdomWindow.document;
 global.$ = jQueryFactory(jsdomWindow);

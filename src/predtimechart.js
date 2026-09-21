@@ -339,6 +339,7 @@ const App = {
 
         // validate options object merged with URL params, if present
         let isShowOptionsInURL = false;
+        let isAsOfFromURL = false;  // true if the URL is where `initial_as_of` ends up coming from
         const optionsFromURL = getOptionsFromURL(options['task_ids'], window.location.search);
         if (Object.keys(optionsFromURL).length !== 0) {
             const mergedOptions = {...options, ...optionsFromURL}  // NB: second overrides first
@@ -346,6 +347,7 @@ const App = {
                 _validateOptions(mergedOptions);
                 console.debug('initialize(): merged options are valid');
                 options = mergedOptions;
+                isAsOfFromURL = optionsFromURL.hasOwnProperty('initial_as_of');
             } catch (error) {
                 console.error(`invalid URL option(s): ${error}`);
                 showDialog('Ignoring invalid URL parameter(s)', error);
@@ -385,10 +387,14 @@ const App = {
         // this.state.selected_truth: synchronized via default <input ... checked> setting
         this.state.selected_models = options['initial_checked_models'];
 
-        // reset season mode to its defaults - season mode is not (yet) an option, and `App` is a singleton that can be
-        // initialized more than once
-        this.state.is_season_mode = false;
-        this.state.season_start_month = DEFAULT_SEASON_START_MONTH;
+        // save initial season mode state. NB: we always set these (rather than leaving whatever's there) b/c `App`
+        // is a singleton that can be initialized more than once. `selected_season_start_year` is resolved just below
+        this.state.is_season_mode = options.hasOwnProperty('initial_season_mode')
+            ? options['initial_season_mode'] : false;
+        this.state.season_start_month = options.hasOwnProperty('initial_season_start_month')
+            ? options['initial_season_start_month'] : DEFAULT_SEASON_START_MONTH;
+        this.state.plotted_season_start_year = null;
+        this._initializeSeasonState(options, isAsOfFromURL);
 
         // populate UI elements, setting selection state to initial
         console.debug('initialize(): initializing UI');
@@ -417,7 +423,11 @@ const App = {
         console.debug('initialize(): done');
         return null;  // no error
     },
-    showOptionsInURL() {
+    /**
+     * @returns {URL} a URL for the current window location whose search params capture the app's shareable state.
+     *   Split out from showOptionsInURL() so that the params can be tested without touching window.history
+     */
+    optionsURL() {
         const newUrl = new URL(window.location.origin + window.location.pathname);
         newUrl.searchParams.append("as_of", this.state.selected_as_of_date);
         newUrl.searchParams.append("interval", this.state.selected_interval);
@@ -450,6 +460,22 @@ const App = {
             newUrl.searchParams.append(taskID, taskValue);
         }
 
+        // season mode params. NB: we only add these when season mode is on - o/w they'd be noise in every URL, and
+        // off is the default anyway. this does mean a non-default "Season start" isn't captured by a URL copied
+        // while season mode is off
+        if (this.state.is_season_mode) {
+            newUrl.searchParams.append("season_mode", "true");
+            if (this.state.selected_season_start_year !== null) {
+                newUrl.searchParams.append("season", this.state.selected_season_start_year);
+            }
+            newUrl.searchParams.append("season_start", this.state.season_start_month);
+        }
+
+        return newUrl;
+    },
+    showOptionsInURL() {
+        const newUrl = this.optionsURL();
+
         // following is to prevent browser history errors resulting from calling `replaceState()` too many times, e.g.,
         // in Firefox: "Too many calls to Location or History APIs within a short timeframe."
         if ((window.history.state === null) || (newUrl.toString() !== window.history.state.toString())) {
@@ -464,8 +490,8 @@ const App = {
         this.updateModelsList();
 
         // initialize the season controls. NB: they're hidden until season mode is turned on, but we fill them in now
-        // so that turning it on has something to show
-        this.state.selected_season_start_year = this.defaultSeasonStartYear();
+        // so that turning it on has something to show. `state.selected_season_start_year` was resolved by
+        // initialize() -> _initializeSeasonState()
         this.initializeSeasonStartUI();
         this.initializeSeasonsUI();
 
@@ -611,6 +637,40 @@ const App = {
         return seasonsInDates(availableAsOfs, this.state.season_start_month);
     },
     /**
+     * initialize() helper that resolves `state.selected_season_start_year` and, when the season was picked
+     * explicitly, `state.selected_as_of_date`.
+     *
+     * The as_of date and the season can disagree - a hand-edited URL, say, or a consumer passing an
+     * `initial_season` from a different season than its `initial_as_of`. The rule: an as_of date that came from the
+     * URL is the most specific thing the user asked for, so it wins and the season is derived from it. O/w an
+     * explicit `initial_season` wins and we move to that season's first as_of date, ala picking a season from the
+     * "Season" <SELECT>. NB: `initial_season` only applies in season mode - there's no season to be in when it's off
+     *
+     * @param options {Object} ala initialize()'s `options`, already merged with any valid URL options
+     * @param isAsOfFromURL {Boolean} true if `options['initial_as_of']` came from the URL rather than the caller
+     * @private
+     */
+    _initializeSeasonState(options, isAsOfFromURL) {
+        const state = this.state;
+        const initialSeason = options.hasOwnProperty('initial_season') ? options['initial_season'] : null;
+        if (!state.is_season_mode || (initialSeason === null) || isAsOfFromURL) {
+            if ((initialSeason !== null) && isAsOfFromURL
+                && (initialSeason !== seasonStartYear(state.selected_as_of_date, state.season_start_month))) {
+                console.warn(`initialize(): ignoring initial_season=${initialSeason} b/c it disagrees with the as_of `
+                    + `date from the URL (${state.selected_as_of_date})`);
+            }
+            state.selected_season_start_year = this.defaultSeasonStartYear();
+            return;
+        }
+
+        // the season was picked explicitly -> honor it, moving to its first as_of date
+        state.selected_season_start_year = initialSeason;
+        const seasonAsOfs = this.asOfsInSelectedSeason();
+        if (seasonAsOfs.length !== 0) {
+            state.selected_as_of_date = seasonAsOfs[0];
+        }
+    },
+    /**
      * @returns {Number} the season that `state.selected_as_of_date` falls in, falling back to the newest season that
      *   has as_of dates. null if neither is available
      */
@@ -699,6 +759,7 @@ const App = {
             App.syncSelectedSeason();
             App.updateSeasonModeUI();
             App.updatePlot(true);
+            App.showOptionsInURL();
         });
 
         // "Season" select
@@ -716,6 +777,7 @@ const App = {
             } else {
                 App.updateSeasonNavState();
                 App.updatePlot(true);
+                App.showOptionsInURL();
             }
         });
 
@@ -725,6 +787,7 @@ const App = {
             App.state.plotted_season_start_year = null;  // ""
             App.syncSelectedSeason();
             App.updatePlot(true);
+            App.showOptionsInURL();
         });
 
         // truth checkboxes
@@ -847,6 +910,7 @@ const App = {
      */
     updateSeasonModeUI() {
         const isSeasonMode = this.state.is_season_mode;
+        $("#forecastViz_season_mode").prop('checked', isSeasonMode);  // a no-op when the checkbox is what changed
         $("#forecastViz_season_controls").toggle(isSeasonMode);
         $("#forecastViz_other_seasons_row").toggle(isSeasonMode);
         this.updateTruthCheckboxLabels();

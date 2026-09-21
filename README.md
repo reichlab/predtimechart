@@ -105,6 +105,9 @@ The component is initialized by a JavaScript object with the following keys and 
 - `initial_as_of`: `string` specifying the initial date from 'available_as_ofs' (in 'YYYY-MM-DD' format) to use for the initially-selected _as_of_ date
 - `initial_checked_models`: `models` value(s) to use for the initial plot
 - `initial_interval`: `intervals` value to use for the initial plot
+- `initial_season`: `integer` specifying the season to plot initially, identified by the calendar year the season starts in - e.g., `2024` for the '2024-2025' season with the default August start. Only applies when `initial_season_mode` is true, and must be a season that the initial target variable's `available_as_ofs` dates fall in. Selecting it moves the initial "as of" date to that season's first available one. See "Season mode (beta)" below
+- `initial_season_mode`: `boolean` specifying whether season mode starts out on. Defaults to `false`
+- `initial_season_start_month`: `integer` from 1 (January) through 12 (December) specifying the month a season starts in. Defaults to 8 (August)
 - `initial_target_var`: `target_variables` `value` key to use for the initial plot
 - `initial_task_ids`:  an `object` to use for the initial plot. Its format is identical to `_fetchData()`'s `taskIDs` arg above.
 - `initial_xaxis_range`: `array` of two dates in 'YYYY-MM-DD' format that specify the initial xaxis range to use. To not initialize the range, pass `null` for its value
@@ -309,8 +312,44 @@ While in season mode, the left/right arrow keys and the `<` / `>` buttons stop a
 also pinned to the selected season's extent, though you can still zoom and pan within it. Turning season mode off
 restores all of the above to the way the component behaves without it.
 
-Note that season mode is a UI-only setting for now: it can't be configured through the options object or the URL, and
-it always starts off, with August as the season start.
+### Configuring season mode
+
+Season mode is off by default, with August as the season start, and can be configured two ways:
+
+- through the options object, via `initial_season_mode`, `initial_season`, and `initial_season_start_month`
+- through the URL, via the `season_mode`, `season`, and `season_start` search params documented under "URL
+  parameters" below
+
+Either way, `initial_season`/`season` only applies when season mode is on - there's no season to be in when it's off.
+
+
+## URL parameters
+
+The app's shareable state is kept in the page's URL search params, which are rewritten as you interact with the
+component. Copying the URL and opening it elsewhere reproduces what you were looking at. The params:
+
+| Param                    | Maps to the option      | Notes                                                           |
+|--------------------------|-------------------------|-----------------------------------------------------------------|
+| `as_of`                  | `initial_as_of`         | 'YYYY-MM-DD'                                                     |
+| `interval`               | `initial_interval`      |                                                                  |
+| `target_var`             | `initial_target_var`    |                                                                  |
+| `model`                  | `initial_checked_models`| repeatable - one per checked model                               |
+| `xaxis_range`            | `initial_xaxis_range`   | repeated twice: start and end                                    |
+| `yaxis_range`            | `initial_yaxis_range`   | ""                                                               |
+| any `task_ids` key       | `initial_task_ids`      | e.g., `location=NYC`                                             |
+| `season_mode`            | `initial_season_mode`   | `true` or `false`                                                |
+| `season`                 | `initial_season`        | the season's start year, e.g., `2024`                            |
+| `season_start`           | `initial_season_start_month` | 1 through 12                                                |
+
+URL params override the options object's values. The merged result is validated against `src/schema.json`, and if
+anything is invalid the whole set is ignored, a dialog says so, and the URL is rewritten to the state actually in
+use.
+
+The three season params are only written to the URL while season mode is on, since off is the default - which does
+mean a non-default "Season start" isn't captured by a URL copied while season mode is off.
+
+If `as_of` and `season` disagree - only possible in a hand-edited URL - `as_of` wins and the season is derived from
+it. A `season` given without an `as_of` wins instead, moving to that season's first available "as of" date.
 
 
 ## Jump to as_of date
