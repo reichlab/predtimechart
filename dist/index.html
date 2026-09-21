@@ -44,6 +44,42 @@
         },
     };
 
+    // The real Zoltar truth for this demo's two reference dates is only the six/seven weeks starting 2021-12-18,
+    // which all fall inside one season. This synthesizes weekly (Saturday) truth back through August 2019 so that
+    // the plot spans three seasons and the gray historical season curves have something to show. The real values
+    // are kept for the weeks Zoltar covers so that they still line up with the hard-coded forecasts.
+    function _multiSeasonTruth(referenceDate) {
+        const realValues = {
+            '2021-12-18': 478.0, '2021-12-25': 266.0, '2022-01-01': 422.0, '2022-01-08': 717.0,
+            '2022-01-15': 623.0, '2022-01-22': 971.0, '2022-01-29': 1212.0
+        };
+        const seasonAmplitudes = {2019: 750, 2020: 1450, 2021: 1050};  // keyed by season start year
+        const date = [];
+        const y = [];
+        for (const day = new Date(2019, 7, 3); ; day.setDate(day.getDate() + 7)) {  // 2019-08-03, a Saturday
+            const dateStr = [String(day.getFullYear()),
+                String(day.getMonth() + 1).padStart(2, '0'),
+                String(day.getDate()).padStart(2, '0')].join('-');
+            if (dateStr > referenceDate) {  // ok to compare 'YYYY-MM-DD' as strings
+                break;
+            }
+
+            date.push(dateStr);
+            if (dateStr in realValues) {
+                y.push(realValues[dateStr]);
+                continue;
+            }
+
+            // a flu-like winter bump: a gaussian peaking ~153 days into the season, i.e., around New Year's Day
+            const startYear = day.getMonth() >= 7 ? day.getFullYear() : day.getFullYear() - 1;
+            const daysIntoSeason = Math.round((day - new Date(startYear, 7, 1)) / (1000 * 60 * 60 * 24));
+            const amplitude = seasonAmplitudes[startYear] === undefined ? 900 : seasonAmplitudes[startYear];
+            y.push(Math.round(80 + amplitude * Math.exp(-Math.pow(daysIntoSeason - 153, 2) / (2 * 35 * 35))));
+        }
+        return {"date": date, "y": y};
+    }
+
+
     // a simple fetchData() that hard-codes truth and forecast data for two reference_dates
     function _fetchData(isForecast, targetKey, taskIDs, referenceDate) {
         console.debug('_fetchData():', isForecast, targetKey, taskIDs, referenceDate);
@@ -98,17 +134,8 @@
                 },
             },
             false: {
-                // https://zoltardata.com/api/project/316/viz-data/?is_forecast=false&target_key=week_ahead_incident_deaths&unit_abbrev=48&reference_date=2022-01-22 :
-                '2022-01-22': {
-                    "date": ["2021-12-18", "2021-12-25", "2022-01-01", "2022-01-08", "2022-01-15", "2022-01-22"],
-                    "y": [478.0, 266.0, 422.0, 717.0, 623.0, 971.0]
-                },
-
-                // https://zoltardata.com/api/project/316/viz-data/?is_forecast=false&target_key=week_ahead_incident_deaths&unit_abbrev=48&reference_date=2022-01-29 :
-                '2022-01-29': {
-                    "date": ["2021-12-18", "2021-12-25", "2022-01-01", "2022-01-08", "2022-01-15", "2022-01-22", "2022-01-29"],
-                    "y": [478.0, 266.0, 422.0, 717.0, 623.0, 971.0, 1212.0]
-                },
+                '2022-01-22': _multiSeasonTruth('2022-01-22'),
+                '2022-01-29': _multiSeasonTruth('2022-01-29'),
             }
         }
 

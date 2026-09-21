@@ -279,6 +279,40 @@ We use [webpack](https://webpack.js.org/) to package up all dependencies into a 
 TBC
 
 
+## Season mode (beta)
+
+By default the plot shows all the target data going back as far as the data reaches. Checking the **Season mode
+(beta)** checkbox in the options panel instead focuses the plot on a single season, with the other seasons drawn in
+light gray behind it, ala the old FluSight Network site. Two dropdowns appear below the checkbox when it's checked:
+
+- **Season**: the season to plot. The choices are the seasons that the current target variable's `available_as_ofs`
+  dates fall in, so every season offered is one you can navigate within. Selecting a season moves the "as of" date to
+  that season's last available one.
+- **Season start**: the month a season starts in - a season runs from the first of that month through the day before
+  the first of that month in the following year. The default is August. Picking January makes a season a single
+  calendar year, which is also how it's named (`2025` rather than `2025-2026`).
+
+Season mode also changes the "Select Target Data" checkboxes:
+
+| Checkbox                        | Meaning                                                                       |
+|---------------------------------|-------------------------------------------------------------------------------|
+| Selected season, as of data     | a vintage of target data as of the selected/navigated-to date (black)          |
+| Selected season, current data   | target data from the most recent vintage for the selected season (dark gray)   |
+| Other seasons, current data     | the most recent vintage from the other seasons, overlaid (light gray)          |
+
+The last one only applies in season mode and is therefore hidden when it's off. The other seasons' dates are shifted by
+whole years so that they line up with the selected season, and their tooltips are just the season's name. Both earlier
+and later seasons are shown, so selecting an older season still shows the ones that followed it.
+
+While in season mode, the left/right arrow keys and the `<` / `>` buttons stop at the selected season's first and last
+"as of" dates - the buttons are disabled there - rather than crossing into the neighboring season. The plot's x-axis is
+also pinned to the selected season's extent, though you can still zoom and pan within it. Turning season mode off
+restores all of the above to the way the component behaves without it.
+
+Note that season mode is a UI-only setting for now: it can't be configured through the options object or the URL, and
+it always starts off, with August as the season start.
+
+
 ## Jump to as_of date
 
 To jump to a specific "as of" date (i.e., reference date), use the calendar icon in the plot's _modebar_, which is located in the top right of the plot. This strip of gray icons is shown by hovering over the chart. (See the below screenshot for an example.) Clicking the icon will pop up a date picker where you can navigate to a date and then click "Apply" to set it as the current "as of" date. Note that the year select box above calendar is constrained to the current target's data date range. Because not every calendar data has a corresponding "as of" date, picking a date that corresponds to the currently-set "as of" date will not update the display.

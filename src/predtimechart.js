@@ -2,7 +2,18 @@
  * predtimechart: A JavaScript (ES6 ECMAScript) module for forecast visualization.
  */
 
-import {closestYear, getOptionsFromURL} from "./utils.js";
+import {
+    closestYear,
+    DEFAULT_SEASON_START_MONTH,
+    filterTruthToSeason,
+    getOptionsFromURL,
+    seasonDateRange,
+    seasonName,
+    seasonStartYear,
+    seasonsInDates,
+    shiftDateStrByYears,
+    splitTruthBySeason
+} from "./utils.js";
 import _validateOptions from './validation.js';
 
 
@@ -23,10 +34,12 @@ function _selectModelDiv(model, modelUrl, modelColor, isEnabled, isChecked) {
 }
 
 
-// event handler helper
+// event handler helper. NB: 'Other Seasons' only applies in season mode, but we track its checkbox regardless so that
+// the choice is remembered across season mode toggles
 function _setSelectedTruths() {
     const isCurrTruthChecked = $("#forecastViz_Current_Truth").prop('checked');
     const isAsOfTruthChecked = $("#forecastViz_Truth_as_of").prop('checked');  // ""
+    const isOtherSeasonsChecked = $("#forecastViz_Other_Seasons").prop('checked');  // ""
     const selectedTruths = [];
     if (isCurrTruthChecked) {
         selectedTruths.push('Current Target');
@@ -34,8 +47,24 @@ function _setSelectedTruths() {
     if (isAsOfTruthChecked) {
         selectedTruths.push('Target as of');
     }
+    if (isOtherSeasonsChecked) {
+        selectedTruths.push('Other Seasons');
+    }
     App.state.selected_truth = selectedTruths;
     App.fetchDataUpdatePlot(false, false);
+}
+
+
+/**
+ * getPlotlyData() helper.
+ *
+ * @param truthData {Object} truth data ala _fetchData()'s truth format: {date: [...], y: [...]}. NB: this is `[]`
+ *   rather than an object before any data has been fetched, or after a fetch error
+ * @returns {Boolean} true if `truthData` has at least one point to plot
+ * @private
+ */
+function _hasTruthPoints(truthData) {
+    return (truthData != null) && Array.isArray(truthData.date) && (truthData.date.length !== 0);
 }
 
 
@@ -83,16 +112,41 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
     $optionsForm.append(_createFormRow('intervals', 'Interval'));
     $optionsDiv.append($optionsForm);
 
-    // add truth checkboxes
+    // add the "Season mode (beta)" section: a header with a checkbox to its right (ala "Select Models" below),
+    // followed by the two season <SELECT>s, which are only shown when season mode is on. NB: the <SELECT>s are
+    // unfilled; their <OPTION>s are added by initializeSeasonsUI() and initializeSeasonStartUI()
+    $optionsDiv.append($(
+        '<div class="pt-md-3">\n' +
+        '    <form class="d-flex flex-row align-items-center flex-wrap">\n' +
+        '        <label class="forecastViz_label me-2" for="forecastViz_season_mode">Season mode (beta):</label>\n' +
+        '        <input type="checkbox" id="forecastViz_season_mode">\n' +
+        '    </form>\n' +
+        '</div>'));
+    const $seasonControlsDiv = $('<div id="forecastViz_season_controls" class="ms-3" style="display: none"></div>');
+    const $seasonForm = $('<form></form>');
+    $seasonForm.append(_createFormRow('season', 'Season'));
+    $seasonForm.append(_createFormRow('season_start', 'Season start'));
+    $seasonControlsDiv.append($seasonForm);
+    $optionsDiv.append($seasonControlsDiv);
+
+    // add truth checkboxes. NB: the "as of" one is listed first and is the darkest b/c it's the one the left/right
+    // navigation changes. the third one only applies in season mode and is therefore hidden when that's off. the
+    // labels themselves are set by updateTruthCheckboxLabels(), which varies them by mode
     const $truthCheckboxesDiv = $(
         '<div class="form-group form-check forecastViz_select_data ">\n' +
-        '    <input title="curr target" type="checkbox" id="forecastViz_Current_Truth" value="Current Target" checked>\n' +
-        '      &nbsp;<span id="currentTruthDate">Current (current target date here)</span>\n' +
-        '      &nbsp;<span class="forecastViz_dot" style="background-color: lightgrey; "></span>\n' +
-        '    <br>\n' +
         '    <input title="target as of" type="checkbox" id="forecastViz_Truth_as_of" value="Target as of" checked>\n' +
         '      &nbsp;<span id="asOfTruthDate">(as of truth date here)</span>\n' +
         '      &nbsp;<span class="forecastViz_dot" style="background-color: black;"></span>\n' +
+        '    <br>\n' +
+        '    <input title="curr target" type="checkbox" id="forecastViz_Current_Truth" value="Current Target" checked>\n' +
+        '      &nbsp;<span id="currentTruthDate">Current (current target date here)</span>\n' +
+        '      &nbsp;<span class="forecastViz_dot" style="background-color: darkgray; "></span>\n' +
+        '    <span id="forecastViz_other_seasons_row" style="display: none">\n' +
+        '        <br>\n' +
+        '        <input title="other seasons" type="checkbox" id="forecastViz_Other_Seasons" value="Other Seasons" checked>\n' +
+        '          &nbsp;<span>Other seasons, current data</span>\n' +
+        '          &nbsp;<span class="forecastViz_dot" style="background-color: lightgray;"></span>\n' +
+        '    </span>\n' +
         '</div>');
     $optionsDiv.append('<div class="pt-md-3">Select Target Data:</div>');
     $optionsDiv.append($truthCheckboxesDiv);
@@ -222,12 +276,19 @@ const App = {
         selected_target_var: '',
         selected_interval: '',
         selected_as_of_date: '',
-        selected_truth: ['Current Target', 'Target as of'],
+        selected_truth: ['Current Target', 'Target as of', 'Other Seasons'],
         selected_models: [],
         last_selected_models: [],  // last manually-selected models. used by "Select Models" checkbox
         colors: [],
         initial_xaxis_range: null,  // initialize() option
         initial_yaxis_range: null,  // ""
+
+        // season mode state. season mode is off by default, in which case the app behaves as it did before season mode
+        // was added: one plot of all the data, with no other seasons behind it
+        is_season_mode: false,
+        season_start_month: DEFAULT_SEASON_START_MONTH,  // 1-based month a season starts in. "Season start" <SELECT>
+        selected_season_start_year: null,  // the selected season, ala seasonStartYear(). "Season" <SELECT>
+        plotted_season_start_year: null,  // the season updatePlot() last set the xaxis range to
 
         // 2/2 Data used to create plots:
         current_truth: [],
@@ -324,6 +385,11 @@ const App = {
         // this.state.selected_truth: synchronized via default <input ... checked> setting
         this.state.selected_models = options['initial_checked_models'];
 
+        // reset season mode to its defaults - season mode is not (yet) an option, and `App` is a singleton that can be
+        // initialized more than once
+        this.state.is_season_mode = false;
+        this.state.season_start_month = DEFAULT_SEASON_START_MONTH;
+
         // populate UI elements, setting selection state to initial
         console.debug('initialize(): initializing UI');
         const $componentDiv = $(componentDivEle);
@@ -397,9 +463,14 @@ const App = {
         this.initializeIntervalsUI();
         this.updateModelsList();
 
-        // initialize current and as_of truth checkboxes' text
-        $("#currentTruthDate").text(`Current (${this.state.current_date})`);
-        this.updateTruthAsOfCheckboxText();
+        // initialize the season controls. NB: they're hidden until season mode is turned on, but we fill them in now
+        // so that turning it on has something to show
+        this.state.selected_season_start_year = this.defaultSeasonStartYear();
+        this.initializeSeasonStartUI();
+        this.initializeSeasonsUI();
+
+        // initialize truth checkboxes' text and the season mode-only controls' visibility
+        this.updateSeasonModeUI();
 
         // initialize disclaimer
         if (isDisclaimerPresent) {
@@ -447,7 +518,7 @@ const App = {
         });
         $icon.on('apply.daterangepicker', function (ev, picker) {
             const pickedDate = picker.startDate.format('YYYY-MM-DD');
-            const availableAsOfs = App.state.available_as_ofs[App.state.selected_target_var];
+            const availableAsOfs = App.asOfsInSelectedSeason();  // stays within the season when in season mode
             const closestAsOf = closestYear(pickedDate, availableAsOfs);
 
             // reset picked date to today (o/w stays on picked date)
@@ -458,7 +529,8 @@ const App = {
             if (closestAsOf !== App.state.selected_as_of_date) {
                 App.state.selected_as_of_date = closestAsOf;
                 App.fetchDataUpdatePlot(true, false);
-                App.updateTruthAsOfCheckboxText();
+                App.updateTruthCheckboxLabels();
+                App.updateSeasonNavState();
             }
         });
 
@@ -497,6 +569,72 @@ const App = {
             const optionNode = `<option value="${interval}" ${selected} >${interval}</option>`;
             $intervalsSelect.append(optionNode);
         });
+    },
+    /**
+     * Populates the "Season start" <SELECT> with the 12 months, selecting `state.season_start_month`.
+     */
+    initializeSeasonStartUI() {
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
+            'October', 'November', 'December'];
+        const $seasonStartSelect = $("#season_start");
+        const thisState = this.state;
+        $seasonStartSelect.empty();
+        monthNames.forEach(function (monthName, monthIdx) {
+            const month = monthIdx + 1;  // monthIdx -> 1-based month
+            const selected = month === thisState.season_start_month ? 'selected' : '';
+            $seasonStartSelect.append(`<option value="${month}" ${selected} >${monthName}</option>`);
+        });
+    },
+    /**
+     * Populates the "Season" <SELECT> with the seasons present in the selected target variable's `available_as_ofs`,
+     * newest first, selecting `state.selected_season_start_year`. NB: we use `available_as_ofs` rather than the truth
+     * data so that every season that can be selected is one that can actually be navigated to - it has as_of dates, and
+     * therefore forecasts and as_of truth. Seasons that only the truth data reaches back to are still drawn as "other
+     * seasons" curves; they just can't be selected.
+     */
+    initializeSeasonsUI() {
+        const $seasonsSelect = $("#season");
+        const thisState = this.state;
+        $seasonsSelect.empty();
+        this.availableSeasonStartYears().reverse().forEach(function (startYear) {  // newest first
+            const selected = startYear === thisState.selected_season_start_year ? 'selected' : '';
+            const seasonText = seasonName(startYear, thisState.season_start_month);
+            $seasonsSelect.append(`<option value="${startYear}" ${selected} >${seasonText}</option>`);
+        });
+    },
+    /**
+     * @returns {Array} the starting years of the seasons the selected target variable has as_of dates for, ascending.
+     *   [] if there are no as_of dates
+     */
+    availableSeasonStartYears() {
+        const availableAsOfs = this.state.available_as_ofs[this.state.selected_target_var];
+        return seasonsInDates(availableAsOfs, this.state.season_start_month);
+    },
+    /**
+     * @returns {Number} the season that `state.selected_as_of_date` falls in, falling back to the newest season that
+     *   has as_of dates. null if neither is available
+     */
+    defaultSeasonStartYear() {
+        if (this.state.selected_as_of_date) {
+            return seasonStartYear(this.state.selected_as_of_date, this.state.season_start_month);
+        }
+
+        const startYears = this.availableSeasonStartYears();
+        return (startYears.length === 0) ? null : startYears[startYears.length - 1];
+    },
+    /**
+     * @returns {Array} the selected target variable's as_of dates that fall in the selected season, ascending. all of
+     *   them if not in season mode or if no season is selected
+     */
+    asOfsInSelectedSeason() {
+        const state = this.state;
+        const availableAsOfs = state.available_as_ofs[state.selected_target_var];
+        if (!state.is_season_mode || (state.selected_season_start_year === null)) {
+            return availableAsOfs;
+        }
+
+        return availableAsOfs.filter((asOf) =>
+            seasonStartYear(asOf, state.season_start_month) === state.selected_season_start_year);
     },
     updateModelsList() {
         // populate the select model div
@@ -537,6 +675,7 @@ const App = {
             App.state.selected_target_var = this.value;
             App.initializeTaskIDsUI(App.state.task_ids, App.state.selected_target_var,
                 App.state.task_ids[App.state.selected_target_var]);
+            App.syncSelectedSeason();  // b/c `available_as_ofs` - and therefore the seasons - is per target variable
             App.fetchDataUpdatePlot(true, true);
             App.showOptionsInURL();
         });
@@ -552,11 +691,50 @@ const App = {
             App.showOptionsInURL();
         });
 
+        // "Season mode (beta)" checkbox. NB: no fetch is needed - season mode is purely a matter of how the data
+        // we already have is plotted
+        $("#forecastViz_season_mode").change(function () {
+            App.state.is_season_mode = $(this).prop('checked');
+            App.state.plotted_season_start_year = null;  // so updatePlot() re-applies (or releases) the xaxis range
+            App.syncSelectedSeason();
+            App.updateSeasonModeUI();
+            App.updatePlot(true);
+        });
+
+        // "Season" select
+        $('#season').on('change', function () {
+            App.state.selected_season_start_year = parseInt(this.value);
+
+            // move to the season's last as_of date, which is where the season's data is most complete
+            const seasonAsOfs = App.asOfsInSelectedSeason();
+            if ((seasonAsOfs.length !== 0) && (seasonAsOfs.at(-1) !== App.state.selected_as_of_date)) {
+                App.state.selected_as_of_date = seasonAsOfs.at(-1);
+                App.updateTruthCheckboxLabels();
+                App.updateSeasonNavState();
+                App.fetchDataUpdatePlot(true, false);  // current truth is keyed on `current_date` -> no need to refetch
+                App.showOptionsInURL();
+            } else {
+                App.updateSeasonNavState();
+                App.updatePlot(true);
+            }
+        });
+
+        // "Season start" select. changing it moves the season boundaries, so the season list has to be rebuilt
+        $('#season_start').on('change', function () {
+            App.state.season_start_month = parseInt(this.value);
+            App.state.plotted_season_start_year = null;  // ""
+            App.syncSelectedSeason();
+            App.updatePlot(true);
+        });
+
         // truth checkboxes
         $("#forecastViz_Current_Truth").change(function () {
             _setSelectedTruths();
         });
         $("#forecastViz_Truth_as_of").change(function () {
+            _setSelectedTruths();
+        });
+        $("#forecastViz_Other_Seasons").change(function () {
             _setSelectedTruths();
         });
 
@@ -626,27 +804,89 @@ const App = {
     //
 
     incrementAsOf() {
-        const state = this.state;
-        const as_of_index = state.available_as_ofs[state.selected_target_var].indexOf(state.selected_as_of_date);
-        if (as_of_index < state.available_as_ofs[state.selected_target_var].length - 1) {
-            state.selected_as_of_date = state.available_as_ofs[state.selected_target_var][as_of_index + 1];
-            this.fetchDataUpdatePlot(true, false);
-            this.updateTruthAsOfCheckboxText();
-            this.showOptionsInURL();
-        }
+        this._moveAsOf(1);
     },
     decrementAsOf() {
-        const state = this.state;
-        const as_of_index = state.available_as_ofs[state.selected_target_var].indexOf(state.selected_as_of_date);
-        if (as_of_index > 0) {
-            state.selected_as_of_date = state.available_as_ofs[state.selected_target_var][as_of_index - 1];
-            this.fetchDataUpdatePlot(true, false);
-            this.updateTruthAsOfCheckboxText();
-            this.showOptionsInURL();
-        }
+        this._moveAsOf(-1);
     },
-    updateTruthAsOfCheckboxText() {
-        $("#asOfTruthDate").text(`As of ${this.state.selected_as_of_date}`);
+    /**
+     * incrementAsOf()/decrementAsOf() helper that moves `state.selected_as_of_date` by `offset` as_of dates. In season
+     * mode we only move within the selected season, so the ends of a season are hard stops.
+     *
+     * @param offset {Number} number of as_of dates to move by. negative moves back in time
+     * @private
+     */
+    _moveAsOf(offset) {
+        const state = this.state;
+        const asOfs = this.asOfsInSelectedSeason();  // all of them if not in season mode
+        const asOfIdx = asOfs.indexOf(state.selected_as_of_date);
+        const newAsOfIdx = asOfIdx + offset;
+        if ((asOfIdx === -1) || (newAsOfIdx < 0) || (newAsOfIdx > asOfs.length - 1)) {
+            return;  // at (or outside) the end of what we can navigate
+        }
+
+        state.selected_as_of_date = asOfs[newAsOfIdx];
+        this.fetchDataUpdatePlot(true, false);
+        this.updateTruthCheckboxLabels();
+        this.updateSeasonNavState();
+        this.showOptionsInURL();
+    },
+    /**
+     * Sets the "Select Target Data" checkbox labels, which differ by mode: outside season mode there is no selected
+     * season to name, and the "other seasons" checkbox doesn't apply at all.
+     */
+    updateTruthCheckboxLabels() {
+        const state = this.state;
+        const asOfText = `As of data ${state.selected_as_of_date}`;
+        const currentText = `Current data (${state.current_date})`;
+        $("#asOfTruthDate").text(state.is_season_mode ? `Selected season, ${asOfText.toLowerCase()}` : asOfText);
+        $("#currentTruthDate").text(state.is_season_mode ? `Selected season, ${currentText.toLowerCase()}` : currentText);
+    },
+    /**
+     * Shows or hides the season mode-only controls to match `state.is_season_mode`.
+     */
+    updateSeasonModeUI() {
+        const isSeasonMode = this.state.is_season_mode;
+        $("#forecastViz_season_controls").toggle(isSeasonMode);
+        $("#forecastViz_other_seasons_row").toggle(isSeasonMode);
+        this.updateTruthCheckboxLabels();
+        this.updateSeasonNavState();
+    },
+    /**
+     * In season mode, disables the left/right buttons at the selected season's first and last as_of dates so that the
+     * season boundary is visibly a hard stop. Outside season mode the buttons are always enabled, ala before season
+     * mode was added.
+     */
+    updateSeasonNavState() {
+        if (!this.state.is_season_mode) {
+            $("#decrement_as_of").prop('disabled', false);
+            $("#increment_as_of").prop('disabled', false);
+            return;
+        }
+
+        const asOfs = this.asOfsInSelectedSeason();
+        const asOfIdx = asOfs.indexOf(this.state.selected_as_of_date);
+        $("#decrement_as_of").prop('disabled', (asOfIdx <= 0));
+        $("#increment_as_of").prop('disabled', ((asOfIdx === -1) || (asOfIdx >= asOfs.length - 1)));
+    },
+    /**
+     * Rebuilds the "Season" <SELECT> and makes sure the selected season and as_of date agree with each other. Called
+     * whenever something that determines the available seasons changes: the target variable, the season start month,
+     * or season mode itself.
+     */
+    syncSelectedSeason() {
+        const state = this.state;
+        state.selected_season_start_year = this.defaultSeasonStartYear();  // the season `selected_as_of_date` is in
+        this.initializeSeasonsUI();
+
+        // the as_of date drives the season above, so it's already in the season. but it can be outside the available
+        // as_ofs entirely (a target variable change, say), in which case we move to the nearest available one
+        const asOfs = this.asOfsInSelectedSeason();
+        if ((asOfs.length !== 0) && (asOfs.indexOf(state.selected_as_of_date) === -1)) {
+            state.selected_as_of_date = closestYear(state.selected_as_of_date, asOfs);
+        }
+        this.updateTruthCheckboxLabels();
+        this.updateSeasonNavState();
     },
 
     // Returns an array of models that are not grayed out.
@@ -795,7 +1035,20 @@ const App = {
         // compute xaxis.range and yaxis.range, factoring in whether there's existing data (and therefore an existing
         // layout) and then do relayout()
         const relayoutUpdate = {};  // passed to relayout(). filled next
-        if (isExistingData) {
+
+        // in season mode we plot one season at a time, so the xaxis range is the season's, not the data's or the
+        // caller's `initial_xaxis_range`. NB: we only force it when the season changes so that zooming within a season
+        // isn't undone by every replot (selecting a model, say)
+        const refStartYear = this.state.is_season_mode ? this.referenceSeasonStartYear() : null;
+        const isNewSeason = refStartYear !== this.state.plotted_season_start_year;
+        this.state.plotted_season_start_year = refStartYear;
+
+        if (isNewSeason && (refStartYear !== null)) {
+            relayoutUpdate['xaxis.range'] = seasonDateRange(refStartYear, this.state.season_start_month);
+            if (!isResetYLimit && isExistingData && !isYAxisRangeDefault) {
+                relayoutUpdate['yaxis.range'] = currYAxisRange;
+            }
+        } else if (isExistingData) {
             // above plotyDiv.layout.* is NOT undefined -> can use currXAxisRange, ...
             if (!isXAxisRangeDefault) {
                 relayoutUpdate['xaxis.range'] = currXAxisRange;
@@ -853,33 +1106,94 @@ const App = {
             }
         }
     },
+    /**
+     * @returns {Number} the starting year of the season currently being viewed - the one selected in the "Season"
+     *   <SELECT>, falling back to the selected as_of date's and then to that of the latest date in
+     *   `state.current_truth`. null if none is available
+     */
+    referenceSeasonStartYear() {
+        const state = this.state;
+        if (state.selected_season_start_year !== null) {
+            return state.selected_season_start_year;
+        } else if (state.selected_as_of_date) {
+            return seasonStartYear(state.selected_as_of_date, state.season_start_month);
+        }
+
+        const dates = (state.current_truth == null) ? null : state.current_truth.date;
+        return (Array.isArray(dates) && (dates.length !== 0))
+            ? seasonStartYear(dates[dates.length - 1], state.season_start_month) : null;
+    },
+    /**
+     * getPlotlyData() helper that returns the "Other seasons, current data" curves: one light gray line per season in
+     * `state.current_truth` other than the one currently being viewed, with each one's dates shifted by whole years so
+     * that it overlays the selected season. Both earlier and later seasons are included, so selecting an old season
+     * still shows the ones that followed it. Each trace's tooltip is just its season name, e.g., '2022-2023'.
+     *
+     * @returns {Array} Plotly traces, oldest season first. [] if not in season mode, if the "Other seasons, current
+     *   data" checkbox is unchecked, or if there's no other season's truth data
+     */
+    getSeasonalTruthTraces() {
+        const state = this.state;
+        const refStartYear = this.referenceSeasonStartYear();
+        if (!state.is_season_mode || !state.selected_truth.includes('Other Seasons') || (refStartYear === null)) {
+            return [];
+        }
+
+        return splitTruthBySeason(state.current_truth, state.season_start_month)
+            .filter((seasonChunk) => seasonChunk.startYear !== refStartYear)
+            .map((seasonChunk) => {
+                const numYears = refStartYear - seasonChunk.startYear;  // negative for seasons after the selected one
+                return {
+                    x: seasonChunk.date.map((dateStr) => shiftDateStrByYears(dateStr, numYears)),
+                    y: seasonChunk.y,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: seasonChunk.season,
+                    line: {color: 'lightgray', width: 1},
+                    hovertemplate: `<b>${seasonChunk.season}</b><extra></extra>`
+                };
+            });
+    },
     getPlotlyData() {
         const state = this.state;
         let pd = [];
-        if (state.selected_truth.includes('Current Target') && Object.keys(state.current_truth).length !== 0) {
+
+        // in season mode - ala the old FluSight Network site - we plot one season at a time: the truth is trimmed to
+        // the selected season, and the other seasons are overlaid on it by getSeasonalTruthTraces() below. o/w we plot
+        // all the truth we have, as we did before season mode was added
+        const refStartYear = this.referenceSeasonStartYear();
+        const isSeasonMode = state.is_season_mode;
+        const currentTruth = isSeasonMode
+            ? filterTruthToSeason(state.current_truth, refStartYear, state.season_start_month) : state.current_truth;
+        const asOfTruth = isSeasonMode
+            ? filterTruthToSeason(state.as_of_truth, refStartYear, state.season_start_month) : state.as_of_truth;
+        const currentTruthName = isSeasonMode ? 'Selected season, current data' : 'Current Target';
+        const asOfTruthName = isSeasonMode
+            ? `Selected season, as of data ${state.selected_as_of_date}` : `Target as of ${state.selected_as_of_date}`;
+
+        if (state.selected_truth.includes('Current Target') && _hasTruthPoints(currentTruth)) {
             pd.push({
-                x: state.current_truth.date,
-                y: state.current_truth.y,
+                x: currentTruth.date,
+                y: currentTruth.y,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'Current Target',
+                name: currentTruthName,
                 marker: {color: 'darkgray'},
-                hovertemplate: `<b>Current Target</b><br>` +
+                hovertemplate: `<b>${currentTruthName}</b><br>` +
                     `Date: %{x}<br>` +
                     `Value: %{y:,.2~f}` +
                     `<extra></extra>`
             })
         }
-        if (state.selected_truth.includes('Target as of') && Object.keys(state.as_of_truth).length !== 0) {
+        if (state.selected_truth.includes('Target as of') && _hasTruthPoints(asOfTruth)) {
             pd.push({
-                x: state.as_of_truth.date,
-                y: state.as_of_truth.y,
+                x: asOfTruth.date,
+                y: asOfTruth.y,
                 type: 'scatter',
                 mode: 'lines',
-                opacity: 0.5,
-                name: `Target as of ${state.selected_as_of_date}`,
+                name: asOfTruthName,
                 marker: {color: 'black'},
-                hovertemplate: `<b>Target as of ${state.selected_as_of_date}</b><br>` +
+                hovertemplate: `<b>${asOfTruthName}</b><br>` +
                     `Date: %{x}<br>` +
                     `Value: %{y:,.2~f}` +
                     `<extra></extra>`
@@ -1022,6 +1336,9 @@ const App = {
             })
         }
         pd = pd.concat(...pd1)
+
+        // prepend the other seasons' curves so that they're drawn behind everything else. [] when not in season mode
+        pd = this.getSeasonalTruthTraces().concat(pd)
 
         // done!
         return pd
