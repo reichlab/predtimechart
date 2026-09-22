@@ -766,10 +766,12 @@ const App = {
         $('#season').on('change', function () {
             App.state.selected_season_start_year = parseInt(this.value);
 
-            // move to the season's last as_of date, which is where the season's data is most complete
+            // move to the season's first as_of date so that picking a season starts you at the top of it. NB: this
+            // differs from the initial page load, which stays on the caller's `initial_as_of` - typically the most
+            // recent forecast of the most recent season
             const seasonAsOfs = App.asOfsInSelectedSeason();
-            if ((seasonAsOfs.length !== 0) && (seasonAsOfs.at(-1) !== App.state.selected_as_of_date)) {
-                App.state.selected_as_of_date = seasonAsOfs.at(-1);
+            if ((seasonAsOfs.length !== 0) && (seasonAsOfs[0] !== App.state.selected_as_of_date)) {
+                App.state.selected_as_of_date = seasonAsOfs[0];
                 App.updateTruthCheckboxLabels();
                 App.updateSeasonNavState();
                 App.fetchDataUpdatePlot(true, false);  // current truth is keyed on `current_date` -> no need to refetch

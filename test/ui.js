@@ -268,9 +268,9 @@ test('left/right navigation is unrestricted when not in season mode', assert => 
 });
 
 
-test('selecting a season moves to that season\'s last as_of date', assert => {
+test('selecting a season moves to that season\'s first as_of date', assert => {
     initializeTwoSeasons();
-    setSeasonMode(true);
+    setSeasonMode(true);  // starts on 2022-01-29, the last as_of of the 2021-2022 season
 
     $("#season").val('2020').trigger('change');
     assert.equal(App.state.selected_season_start_year, 2020);
@@ -278,6 +278,12 @@ test('selecting a season moves to that season\'s last as_of date', assert => {
     assert.equal($("#asOfTruthDate").text(), 'Selected season, as of data 2021-06-04');
     assert.true($("#decrement_as_of").prop('disabled'), 'a one-as_of season has nowhere to navigate');
     assert.true($("#increment_as_of").prop('disabled'));
+
+    // case: back to a season with more than one as_of -> its first, not the 2022-01-29 we started on
+    $("#season").val('2021').trigger('change');
+    assert.equal(App.state.selected_as_of_date, '2022-01-22', 'the 2021-2022 season\'s first as_of');
+    assert.true($("#decrement_as_of").prop('disabled'), 'at the season\'s first as_of');
+    assert.false($("#increment_as_of").prop('disabled'), 'there is one more to navigate to');
 });
 
 

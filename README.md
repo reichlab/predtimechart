@@ -290,7 +290,9 @@ light gray behind it, ala the old FluSight Network site. Two dropdowns appear be
 
 - **Season**: the season to plot. The choices are the seasons that the current target variable's `available_as_ofs`
   dates fall in, so every season offered is one you can navigate within. Selecting a season moves the "as of" date to
-  that season's last available one.
+  that season's first available one, so you start at the top of the season and can walk forward through it. (The
+  initial page load is different: it stays on the caller's `initial_as_of`, which is typically the most recent
+  forecast of the most recent season.)
 - **Season start**: the month a season starts in - a season runs from the first of that month through the day before
   the first of that month in the following year. The default is August. Picking January makes a season a single
   calendar year, which is also how it's named (`2025` rather than `2025-2026`).
