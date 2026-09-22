@@ -58,6 +58,11 @@
     font-size: 14px;
 }
 
+/* clicking a target data checkbox's text toggles it, ala the model list, so show the text as clickable */
+.forecastViz_select_data label {
+    cursor: pointer;
+}
+
 #forecastViz_select_model {
     height: 48vh;
     overflow-y: scroll;

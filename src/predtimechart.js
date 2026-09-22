@@ -134,19 +134,21 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
     // add truth checkboxes. NB: the "as of" one is listed first and is the darkest b/c it's the one the left/right
     // navigation changes. the third one only applies in season mode and is therefore hidden when that's off. the
     // labels themselves are set by updateTruthCheckboxLabels(), which varies them by mode
+    // NB: each one's text is a <LABEL for> rather than a <SPAN> so that clicking the text toggles the checkbox, ala
+    // the model list below. the colored dots stay outside the labels, also ala the model list
     const $truthCheckboxesDiv = $(
         '<div class="form-group form-check forecastViz_select_data ">\n' +
         '    <input title="target as of" type="checkbox" id="forecastViz_Truth_as_of" value="Target as of" checked>\n' +
-        '      &nbsp;<span id="asOfTruthDate">(as of truth date here)</span>\n' +
+        '      &nbsp;<label for="forecastViz_Truth_as_of" class="form-check-label" id="asOfTruthDate">(as of truth date here)</label>\n' +
         '      &nbsp;<span class="forecastViz_dot" style="background-color: black;"></span>\n' +
         '    <br>\n' +
         '    <input title="curr target" type="checkbox" id="forecastViz_Current_Truth" value="Current Target" checked>\n' +
-        '      &nbsp;<span id="currentTruthDate">Current (current target date here)</span>\n' +
+        '      &nbsp;<label for="forecastViz_Current_Truth" class="form-check-label" id="currentTruthDate">Current (current target date here)</label>\n' +
         '      &nbsp;<span class="forecastViz_dot" style="background-color: darkgray; "></span>\n' +
         '    <span id="forecastViz_other_seasons_row" style="display: none">\n' +
         '        <br>\n' +
         '        <input title="other seasons" type="checkbox" id="forecastViz_Other_Seasons" value="Other Seasons" checked>\n' +
-        '          &nbsp;<span>Other seasons, current data</span>\n' +
+        '          &nbsp;<label for="forecastViz_Other_Seasons" class="form-check-label">Other seasons, current data</label>\n' +
         '          &nbsp;<span class="forecastViz_dot" style="background-color: lightgray;"></span>\n' +
         '    </span>\n' +
         '</div>');

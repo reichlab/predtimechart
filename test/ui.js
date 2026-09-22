@@ -104,6 +104,27 @@ test('initialize() puts each SELECT on one row with its label', assert => {
 });
 
 
+test('initialize() labels the target data checkboxes so their text is clickable', assert => {
+    // NB: these were <SPAN>s, which left only the checkbox itself hittable - unlike the model list, whose text is a
+    // <LABEL for>. it's an accessibility fix as much as an ergonomic one: unlabeled checkboxes have nothing for a
+    // screen reader to announce
+    App.initialize('qunit-fixture', _fetchData, true, covid19ForecastsVizTestOptions);
+    ["forecastViz_Truth_as_of", "forecastViz_Current_Truth", "forecastViz_Other_Seasons"].forEach((checkboxId) => {
+        const $labels = $(`.forecastViz_select_data label[for="${checkboxId}"]`);
+        assert.equal($labels.length, 1, `${checkboxId} has exactly one label`);
+        assert.true($labels.text().length !== 0, `${checkboxId}'s label has text`);
+    });
+
+    // the two whose text varies by mode keep the ids updateTruthCheckboxLabels() writes through
+    assert.equal($("#asOfTruthDate").prop('tagName'), 'LABEL');
+    assert.equal($("#currentTruthDate").prop('tagName'), 'LABEL');
+    App.state.is_season_mode = true;
+    App.updateTruthCheckboxLabels();
+    assert.equal($("#asOfTruthDate").text(), 'Selected season, as of data 2022-01-29');
+    assert.equal($(`label[for="forecastViz_Truth_as_of"]`).text(), 'Selected season, as of data 2022-01-29');
+});
+
+
 //
 // selectedTaskIDs() tests
 //
