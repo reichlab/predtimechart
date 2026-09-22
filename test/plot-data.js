@@ -516,3 +516,29 @@ test('the caller\'s initial_xaxis_range wins when not in season mode', assert =>
     assert.deepEqual(relayoutUpdate['xaxis.range'], ['2019-09-01', '2022-07-01']);
     assert.equal(App.state.plotted_season_start_year, null, 'no season is plotted');
 });
+
+
+//
+// range slider tests
+//
+
+QUnit.module('season mode: range slider');
+
+
+// initializes App and returns getPlotlyLayout()'s xaxis.rangeslider
+function rangesliderFor(isSeasonMode) {
+    const error = App.initialize('qunit-fixture', function (...args) {
+    }, true, structuredClone(testOptions));
+    if (error) {
+        throw `initialize() failed: ${error}`;
+    }
+
+    App.state.is_season_mode = isSeasonMode;
+    return App.getPlotlyLayout().xaxis.rangeslider;
+}
+
+
+test('the range slider is shorter in season mode', assert => {
+    assert.deepEqual(rangesliderFor(false), {}, 'Plotly\'s default height outside season mode');
+    assert.deepEqual(rangesliderFor(true), {thickness: 0.07}, 'about half as tall in season mode');
+});

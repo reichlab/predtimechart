@@ -1164,7 +1164,9 @@ const App = {
             },
             xaxis: {
                 title: {text: 'Date'},
-                rangeslider: {},
+                // in season mode the plot is one season wide, so the range slider isn't needed to find your way
+                // around a long time series and its default height is mostly wasted. make it about half as tall
+                rangeslider: this.state.is_season_mode ? {thickness: 0.07} : {},
             },
             yaxis: {
                 title: {text: variable},

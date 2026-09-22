@@ -311,8 +311,9 @@ and later seasons are shown, so selecting an older season still shows the ones t
 
 While in season mode, the left/right arrow keys and the `<` / `>` buttons stop at the selected season's first and last
 "as of" dates - the buttons are disabled there - rather than crossing into the neighboring season. The plot's x-axis is
-also pinned to the selected season's extent, though you can still zoom and pan within it. Turning season mode off
-restores all of the above to the way the component behaves without it.
+also pinned to the selected season's extent, though you can still zoom and pan within it, and the range slider below
+the plot is drawn at about half its usual height, since a one-season-wide plot doesn't need it to navigate a long time
+series. Turning season mode off restores all of the above to the way the component behaves without it.
 
 ### Configuring season mode
 
