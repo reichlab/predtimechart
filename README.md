@@ -282,6 +282,18 @@ We use [webpack](https://webpack.js.org/) to package up all dependencies into a 
 TBC
 
 
+## Options panel layout
+
+The options panel's dropdowns put their label and `<SELECT>` on one line (`Outcome: [ ... ]`) rather than stacking
+them, and the whole panel is set at 14px so that the dropdowns, their labels, the section headers, and the model list
+are all one size. This matters most in season mode, which adds two more dropdowns to the panel.
+
+That row layout lives in `predtimechart.css` rather than using Bootstrap's grid, deliberately: some consumers embed
+the component in pages whose Bootstrap build ships the form styles but not the grid - a Quarto site, for instance -
+and there a `row`/`col-sm-*` layout silently does nothing, putting each label back above its dropdown. Below 576px
+wide the label and dropdown stack, as before.
+
+
 ## Season mode (beta)
 
 By default the plot shows all the target data going back as far as the data reaches. Checking the **Season mode

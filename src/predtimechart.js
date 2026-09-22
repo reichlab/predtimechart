@@ -86,13 +86,15 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
         return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
     }
 
+    // NB: the label/select layout is ours (predtimechart.css), not Bootstrap's grid. consumers embed us in pages
+    // whose Bootstrap build doesn't necessarily ship the grid - a Quarto site, say - and a `row`/`col-sm-*` that
+    // silently does nothing puts the label back above its select, which is what this row exists to avoid. the
+    // `form-select` classes are only cosmetic, so they degrade to a plain <SELECT> harmlessly
     function _createFormRow(selectId, label) {
         return $(
-            `<div class="form-row">\n` +
-            `    <label for="${selectId}" class="col-sm-4 col-form-label">${label}:</label>\n` +
-            `    <div class="col-sm-8">\n` +
-            `        <select id="${selectId}" class="form-control"></select>\n` +
-            `    </div>\n` +
+            `<div class="forecastViz_form_row">\n` +
+            `    <label for="${selectId}">${label}:</label>\n` +
+            `    <select id="${selectId}" class="form-select form-select-sm"></select>\n` +
             `</div>`)
     }
 
@@ -116,7 +118,7 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
     // followed by the two season <SELECT>s, which are only shown when season mode is on. NB: the <SELECT>s are
     // unfilled; their <OPTION>s are added by initializeSeasonsUI() and initializeSeasonStartUI()
     $optionsDiv.append($(
-        '<div class="pt-md-3">\n' +
+        '<div class="pt-md-2">\n' +
         '    <form class="d-flex flex-row align-items-center flex-wrap">\n' +
         '        <label class="forecastViz_label me-2" for="forecastViz_season_mode">Season mode (beta):</label>\n' +
         '        <input type="checkbox" id="forecastViz_season_mode">\n' +
@@ -148,7 +150,7 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
         '          &nbsp;<span class="forecastViz_dot" style="background-color: lightgray;"></span>\n' +
         '    </span>\n' +
         '</div>');
-    $optionsDiv.append('<div class="pt-md-3">Select Target Data:</div>');
+    $optionsDiv.append('<div class="pt-md-2 forecastViz_label">Select Target Data:</div>');
     $optionsDiv.append($truthCheckboxesDiv);
 
     // add model list controls

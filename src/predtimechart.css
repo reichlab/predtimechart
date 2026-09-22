@@ -10,6 +10,50 @@
     display: inline-block;
 }
 
+/* the options panel: 14px throughout so that the dropdowns, their labels, the section headers, and the model list
+   below them are all one size. NB: .forecastViz_label was referenced but never defined, which left the "Season mode
+   (beta)" and "Select Models" headers at the browser default while everything around them was smaller */
+#forecastViz_options {
+    font-size: 14px;
+}
+
+.forecastViz_label {
+    font-size: 14px;
+}
+
+/* One options-panel dropdown and its label, side by side ("Outcome: [ ... ]") rather than stacked. NB: deliberately
+   self-contained rather than built on Bootstrap's grid - some consumers embed us in pages whose Bootstrap build has
+   the form styles but not the grid, where `row`/`col-sm-*` silently do nothing and the label lands back above its
+   select. The label column is a percentage so the selects line up, but grows for a label too long to fit it */
+.forecastViz_form_row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.forecastViz_form_row > label {
+    flex: 0 0 auto;
+    min-width: 40%;
+    margin-bottom: 0;
+}
+
+.forecastViz_form_row > select {
+    flex: 1 1 auto;
+    min-width: 0;  /* o/w a long option name pushes the select past the panel */
+}
+
+/* too narrow to sit side by side - stack, ala before */
+@media (max-width: 575.98px) {
+    .forecastViz_form_row {
+        display: block;
+    }
+
+    .forecastViz_form_row > label {
+        min-width: 0;
+    }
+}
+
 .forecastViz_select_data {
     font-size: 14px;
 }

@@ -89,6 +89,21 @@ test('initialize() creates SELECTs', assert => {
 });
 
 
+test('initialize() puts each SELECT on one row with its label', assert => {
+    // NB: the row is ours (.forecastViz_form_row), not Bootstrap's grid - see _createFormRow(). guards against
+    // going back to a Bootstrap `row`/`col-sm-*`, which does nothing in a page whose Bootstrap build has no grid,
+    // putting the label back above its select and eating options panel height
+    App.initialize('qunit-fixture', _fetchData, true, covid19ForecastsVizTestOptions);
+    ["target_variable", "unit", "intervals", "season", "season_start"].forEach((selectId) => {
+        const $row = $(`#${selectId}`).parent();
+        assert.true($row.hasClass('forecastViz_form_row'), `${selectId}'s row is ours`);
+        assert.equal($row.children(`label[for="${selectId}"]`).length, 1,
+            `${selectId}'s label is its row's other child`);
+        assert.equal($row.children().length, 2, `${selectId}'s row holds just the label and the select`);
+    });
+});
+
+
 //
 // selectedTaskIDs() tests
 //
@@ -96,14 +111,17 @@ test('initialize() creates SELECTs', assert => {
 QUnit.module('selectedTaskIDs()');
 
 test('selectedTaskIDs() and selectedTaskIDValues() are correct', assert => {
-    // case: two tasks_ids
+    // case: two tasks_ids. NB: `task_ids` is keyed by target variable - without that nesting initialize() rejects
+    // the options and leaves the previous test's state in place, which is what this test used to be reading
     const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
     optionsCopy['task_ids'] = {
-        "scenario_id": [{"value": "1", "text": "scenario 1"}, {"value": "2", "text": "scenario 2"}],
-        "location": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]
+        "week_ahead_incident_deaths": {
+            "scenario_id": [{"value": "1", "text": "scenario 1"}, {"value": "2", "text": "scenario 2"}],
+            "location": [{"value": "48", "text": "Texas"}, {"value": "US", "text": "US"}]
+        }
     };
     optionsCopy['initial_task_ids'] = {"scenario_id": "1", "location": "48"};
-    App.initialize('qunit-fixture', _fetchData, true, optionsCopy);
+    assert.equal(App.initialize('qunit-fixture', _fetchData, true, optionsCopy), null, 'the options are valid');
 
     // test selectedTaskIDs()
     assert.deepEqual(App.selectedTaskIDs(), {
