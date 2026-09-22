@@ -17,8 +17,20 @@
     font-size: 14px;
 }
 
+/* the options panel's section headers: "Season mode (beta)", "Select Target Data", and "Select Models" */
 .forecastViz_label {
     font-size: 14px;
+    font-weight: 600;
+}
+
+/* Each section of the options panel, set off from the one above it by a rule. NB: the rule goes on the section
+   rather than on its header, because two of the three headers are <LABEL>s inside a flex row (they have a checkbox
+   beside them), where a border would span only the text. The color is a neutral translucent gray rather than a
+   fixed one so that it reads correctly on light and dark host themes alike - consumers supply their own */
+.forecastViz_section {
+    border-top: 1px solid rgba(128, 128, 128, 0.35);
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
 }
 
 /* The options-panel dropdowns and their labels, side by side ("Outcome: [ ... ]") rather than stacked. The form is

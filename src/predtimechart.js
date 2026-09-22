@@ -120,9 +120,10 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
 
     // add the "Season mode (beta)" section: a header with a checkbox to its right (ala "Select Models" below),
     // followed by the two season <SELECT>s, which are only shown when season mode is on. NB: the <SELECT>s are
-    // unfilled; their <OPTION>s are added by initializeSeasonsUI() and initializeSeasonStartUI()
+    // unfilled; their <OPTION>s are added by initializeSeasonsUI() and initializeSeasonStartUI(). NB: this
+    // section's rule is also what fences off the Outcome/task ID/Interval group above it, which has no header
     $optionsDiv.append($(
-        '<div class="pt-md-2">\n' +
+        '<div class="forecastViz_section">\n' +
         '    <form class="d-flex flex-row align-items-center flex-wrap">\n' +
         '        <label class="forecastViz_label me-2" for="forecastViz_season_mode">Season mode (beta):</label>\n' +
         '        <input type="checkbox" id="forecastViz_season_mode">\n' +
@@ -156,12 +157,12 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
         '          &nbsp;<span class="forecastViz_dot" style="background-color: lightgray;"></span>\n' +
         '    </span>\n' +
         '</div>');
-    $optionsDiv.append('<div class="pt-md-2 forecastViz_label">Select Target Data:</div>');
+    $optionsDiv.append('<div class="forecastViz_section forecastViz_label">Select Target Data:</div>');
     $optionsDiv.append($truthCheckboxesDiv);
 
     // add model list controls
     $optionsDiv.append($(
-        '<div class="mt-2">\n' +
+        '<div class="forecastViz_section">\n' +
         '    <form class="d-flex flex-row align-items-center flex-wrap">\n' +
         '        <label class="forecastViz_label me-2" for="forecastViz_all">Select Models:</label>\n' +
         '        <input type="checkbox" id="forecastViz_all">\n' +

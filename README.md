@@ -288,6 +288,11 @@ The options panel's dropdowns put their label and `<SELECT>` on one line (`Outco
 them, and the whole panel is set at 14px so that the dropdowns, their labels, the section headers, and the model list
 are all one size. This matters most in season mode, which adds two more dropdowns to the panel.
 
+The panel is divided into sections - "Season mode (beta)", "Select Target Data", and "Select Models" - each with a
+bold header and a hairline rule above it. The first rule also sets off the Outcome/task ID/Interval dropdowns at the
+top, which have no header of their own. The rule's color is a translucent gray rather than a fixed one so that it
+reads correctly against whatever theme the host page uses.
+
 Each group of dropdowns is a two-column CSS grid, so the label column is exactly as wide as its longest label and
 every dropdown starts at the same x, leaving the rest of the panel's width to the dropdowns themselves. That matters
 because the panel is narrow and an outcome variable's name can be long.

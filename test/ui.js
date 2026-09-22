@@ -127,6 +127,22 @@ test('initialize() labels the target data checkboxes so their text is clickable'
 });
 
 
+test('initialize() sets the options panel sections off from each other', assert => {
+    // NB: the rule is on the section, not its header - two of the three headers are <LABEL>s in a flex row, where a
+    // border would span only the text. the first section's rule is also what fences off the Outcome/task ID/
+    // Interval group above it, which has no header of its own
+    App.initialize('qunit-fixture', _fetchData, true, covid19ForecastsVizTestOptions);
+    const $sections = $("#forecastViz_options .forecastViz_section");
+    assert.equal($sections.length, 3, 'season mode, select target data, and select models');
+    $sections.each((idx, ele) => {
+        const $section = $(ele);
+        const isOwnHeader = $section.hasClass('forecastViz_label');  // "Select Target Data" is its own header
+        assert.true(isOwnHeader || ($section.find('.forecastViz_label').length === 1),
+            `section ${idx} has a header`);
+    });
+});
+
+
 //
 // selectedTaskIDs() tests
 //
