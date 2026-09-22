@@ -100,6 +100,8 @@ test('initialize() puts each SELECT on one row with its label', assert => {
         assert.equal($row.children(`label[for="${selectId}"]`).length, 1,
             `${selectId}'s label is its row's other child`);
         assert.equal($row.children().length, 2, `${selectId}'s row holds just the label and the select`);
+        assert.true($row.parent().hasClass('forecastViz_form'),
+            `${selectId}'s row sits in the grid that aligns the columns`);
     });
 });
 

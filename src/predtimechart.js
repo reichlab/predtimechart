@@ -88,7 +88,8 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
 
     // NB: the label/select layout is ours (predtimechart.css), not Bootstrap's grid. consumers embed us in pages
     // whose Bootstrap build doesn't necessarily ship the grid - a Quarto site, say - and a `row`/`col-sm-*` that
-    // silently does nothing puts the label back above its select, which is what this row exists to avoid. the
+    // silently does nothing puts the label back above its select, which is what this row exists to avoid. the row
+    // is a `display: contents` pass-through: the enclosing .forecastViz_form grid is what lines the columns up. the
     // `form-select` classes are only cosmetic, so they degrade to a plain <SELECT> harmlessly
     function _createFormRow(selectId, label) {
         return $(
@@ -102,11 +103,14 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
     //
     // make $optionsDiv (left column)
     //
+    // NB: `col-md-N` must stay the FIRST class here and on $vizDiv below. consumers whose pages lack the Bootstrap
+    // grid map these columns onto their own layout by reading the number out of the class name, with a selector
+    // like `div[class^='col-md']` - prepending another class silently breaks their whole layout
     const $optionsDiv = $('<div class="col-md-3" id="forecastViz_options"></div>');
 
     // add Outcome, task ID, and Interval selects (form). NB: these are unfilled; their <OPTION>s are added by
     // initializeTargetVarsUI(), initializeTaskIDsUI(), and initializeIntervalsUI(), respectively
-    const $optionsForm = $('<form></form>');
+    const $optionsForm = $('<form class="forecastViz_form"></form>');
     $optionsForm.append(_createFormRow('target_variable', 'Outcome'));
     taskIdsKeys.forEach(taskIdKey => {
         $optionsForm.append(_createFormRow(taskIdKey, titleCase(taskIdKey.replace(/[_-]/g, ' '))));  // replace w/spaces
@@ -125,7 +129,7 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
         '    </form>\n' +
         '</div>'));
     const $seasonControlsDiv = $('<div id="forecastViz_season_controls" class="ms-3" style="display: none"></div>');
-    const $seasonForm = $('<form></form>');
+    const $seasonForm = $('<form class="forecastViz_form"></form>');
     $seasonForm.append(_createFormRow('season', 'Season'));
     $seasonForm.append(_createFormRow('season_start', 'Season start'));
     $seasonControlsDiv.append($seasonForm);
@@ -174,7 +178,7 @@ function _createUIElements($componentDiv, taskIdsKeys, isDisclaimerPresent) {
     //
     // make $vizDiv (right column)
     //
-    const $vizDiv = $('<div class="col-md-9" id="forecastViz_viz"></div>');
+    const $vizDiv = $('<div class="col-md-9" id="forecastViz_viz"></div>');  // NB: `col-md-N` first - see $optionsDiv
     const $buttonsDiv = $(
         '<div class="container">\n' +
         '    <div class="col-md-12 text-center">\n' +

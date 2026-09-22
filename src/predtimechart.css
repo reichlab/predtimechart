@@ -21,36 +21,42 @@
     font-size: 14px;
 }
 
-/* One options-panel dropdown and its label, side by side ("Outcome: [ ... ]") rather than stacked. NB: deliberately
-   self-contained rather than built on Bootstrap's grid - some consumers embed us in pages whose Bootstrap build has
-   the form styles but not the grid, where `row`/`col-sm-*` silently do nothing and the label lands back above its
-   select. The label column is a percentage so the selects line up, but grows for a label too long to fit it */
-.forecastViz_form_row {
-    display: flex;
+/* The options-panel dropdowns and their labels, side by side ("Outcome: [ ... ]") rather than stacked. The form is
+   one two-column grid - `display: contents` lets each row's label and select be its items - so that the label
+   column is exactly as wide as the longest label and every select starts at the same x. Sizing the labels
+   individually instead would either misalign the selects or, with a fixed width, spend panel width on padding that
+   the dropdowns need: the selected outcome can be a long name, and the panel is narrow to begin with.
+
+   NB: deliberately self-contained rather than built on Bootstrap's grid - consumers embed us in pages whose
+   Bootstrap build has the form styles but not the grid (a Quarto site, say), where `row`/`col-sm-*` silently do
+   nothing and each label lands back above its dropdown */
+.forecastViz_form {
+    display: grid;
+    grid-template-columns: max-content 1fr;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.25rem;
+    gap: 0.25rem 0.5rem;
+}
+
+.forecastViz_form_row {
+    display: contents;
 }
 
 .forecastViz_form_row > label {
-    flex: 0 0 auto;
-    min-width: 40%;
     margin-bottom: 0;
 }
 
 .forecastViz_form_row > select {
-    flex: 1 1 auto;
     min-width: 0;  /* o/w a long option name pushes the select past the panel */
 }
 
 /* too narrow to sit side by side - stack, ala before */
 @media (max-width: 575.98px) {
-    .forecastViz_form_row {
+    .forecastViz_form {
         display: block;
     }
 
-    .forecastViz_form_row > label {
-        min-width: 0;
+    .forecastViz_form_row > select {
+        width: 100%;
     }
 }
 

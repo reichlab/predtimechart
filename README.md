@@ -288,10 +288,18 @@ The options panel's dropdowns put their label and `<SELECT>` on one line (`Outco
 them, and the whole panel is set at 14px so that the dropdowns, their labels, the section headers, and the model list
 are all one size. This matters most in season mode, which adds two more dropdowns to the panel.
 
-That row layout lives in `predtimechart.css` rather than using Bootstrap's grid, deliberately: some consumers embed
-the component in pages whose Bootstrap build ships the form styles but not the grid - a Quarto site, for instance -
-and there a `row`/`col-sm-*` layout silently does nothing, putting each label back above its dropdown. Below 576px
-wide the label and dropdown stack, as before.
+Each group of dropdowns is a two-column CSS grid, so the label column is exactly as wide as its longest label and
+every dropdown starts at the same x, leaving the rest of the panel's width to the dropdowns themselves. That matters
+because the panel is narrow and an outcome variable's name can be long.
+
+The layout lives in `predtimechart.css` rather than using Bootstrap's grid, deliberately: some consumers embed the
+component in pages whose Bootstrap build ships the form styles but not the grid - a Quarto site, for instance - and
+there a `row`/`col-sm-*` layout silently does nothing, putting each label back above its dropdown. Below 576px wide
+the label and dropdown stack, as before.
+
+Note that the options and plot columns themselves are still Bootstrap's `col-md-3` and `col-md-9`. Consumers whose
+pages lack the Bootstrap grid map those to their own layout - the Quarto dashboards do it by reading the number out
+of the class name - so `col-md-N` needs to stay the first class on those two `<DIV>`s.
 
 
 ## Season mode (beta)
