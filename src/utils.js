@@ -11,21 +11,23 @@ function closestYear(year, availableYears) {
         return year;
     }
 
-    // create availableYears as Date objects and then iterate, comparing each with `year` as a Date and tracking the one
-    // with the minimum offset. no need to sort
+    // iterate over availableYears as Date objects, comparing each with `year` as a Date and tracking the index of the
+    // one with the minimum offset. no need to sort
     const yearAsDate = _parseYYYYMMDDStr(year);
-    const availYearsDates = availableYears.map(availYear => _parseYYYYMMDDStr(availYear));
-    let closestAvailYearDate = null;  // Date
-    availYearsDates.forEach(availYearDate => {
-        const closestAvailYearDelta = closestAvailYearDate === null ? null : Math.abs(closestAvailYearDate - yearAsDate);
-        const availYearDelta = Math.abs(availYearDate - yearAsDate);
-        if ((closestAvailYearDate === null) || (availYearDelta < closestAvailYearDelta)) {
-            closestAvailYearDate = availYearDate;
+    let closestIdx = null;
+    let closestDelta = null;
+    availableYears.forEach((availYear, idx) => {
+        const availYearDelta = Math.abs(_parseYYYYMMDDStr(availYear) - yearAsDate);
+        if ((closestIdx === null) || (availYearDelta < closestDelta)) {
+            closestIdx = idx;
+            closestDelta = availYearDelta;
         }
     });
 
-    // done
-    return closestAvailYearDate.toISOString().split('T')[0];  // convert to 'YYYY-MM-DD' format
+    // done. NB: we return the available date itself rather than converting the Date back to a string. that used
+    // toISOString(), which is UTC: east of UTC, local midnight is still the previous day there, so the result was a
+    // day early - and therefore not in `availableYears` at all
+    return availableYears[closestIdx];
 }
 
 

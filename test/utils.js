@@ -37,6 +37,27 @@ test('closestYear()', assert => {
 });
 
 
+test('closestYear() is independent of the time zone', assert => {
+    // regression: east of UTC, closestYear() used to return the day before the closest date, b/c it converted back to
+    // a string via toISOString(), which is UTC. NB: Node picks up a change to process.env.TZ at runtime
+    const availableYears = ["2022-01-22", "2022-01-29"];
+    const origTZ = process.env.TZ;
+    try {
+        ['America/New_York', 'UTC', 'Europe/Berlin', 'Asia/Tokyo', 'Pacific/Auckland'].forEach(timeZone => {
+            process.env.TZ = timeZone;
+            assert.equal(closestYear("2022-01-24", availableYears), "2022-01-22", `${timeZone}: not ==`);
+            assert.equal(closestYear("2022-01-29", availableYears), "2022-01-29", `${timeZone}: ==`);
+        });
+    } finally {
+        if (origTZ === undefined) {
+            delete process.env.TZ;
+        } else {
+            process.env.TZ = origTZ;
+        }
+    }
+});
+
+
 test('getOptionsFromURL()', assert => {
     const taskIDs = {  // fluMetrocastOptions['task_ids']
         "ILI ED visits": {
