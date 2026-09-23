@@ -140,7 +140,9 @@ const DEFAULT_SEASON_START_MONTH = 8;
  * The `startMonth` arg accepted by the season functions below is a 1-based month (1 = January ... 12 = December). A
  * season starts on the first of that month and ends the day before the first of that month in the following year.
  *
- * @param startMonth {Number} 1-based month, or undefined/null to get DEFAULT_SEASON_START_MONTH
+ * @param startMonth {Number} 1-based month. anything else gets DEFAULT_SEASON_START_MONTH, silently: not just a
+ *   missing one (undefined/null) but an invalid one too - out of range (0, 13) or not a Number ('1', which
+ *   therefore gets August rather than January)
  * @returns {Number} a valid 1-based month
  * @private
  */
@@ -152,7 +154,8 @@ function _validStartMonth(startMonth) {
 
 /**
  * @param dateStr {String} date in 'YYYY-MM-DD' format
- * @param startMonth {Number} 1-based month a season starts in. defaults to DEFAULT_SEASON_START_MONTH
+ * @param startMonth {Number} 1-based month a season starts in. DEFAULT_SEASON_START_MONTH is used if it's missing
+ *   or invalid - see _validStartMonth()
  * @returns {Number} the starting year of the season `dateStr` falls in. e.g., for the default August start,
  *   '2022-09-03' and '2023-07-31' both return 2022, but '2022-07-31' returns 2021. NB: when `startMonth` is 1 a
  *   season is a single calendar year, so this is just `dateStr`'s year
@@ -167,7 +170,8 @@ function seasonStartYear(dateStr, startMonth) {
 
 /**
  * @param startYear {Number} a season's starting year, ala seasonStartYear()
- * @param startMonth {Number} 1-based month a season starts in. defaults to DEFAULT_SEASON_START_MONTH
+ * @param startMonth {Number} 1-based month a season starts in. DEFAULT_SEASON_START_MONTH is used if it's missing
+ *   or invalid - see _validStartMonth()
  * @returns {String} that season's name. a season that starts in January spans a single calendar year and is therefore
  *   named by just that year, e.g., '2025'. o/w it's named by the two years it spans, e.g., '2025-2026'
  */
@@ -178,7 +182,8 @@ function seasonName(startYear, startMonth) {
 
 /**
  * @param dateStr {String} date in 'YYYY-MM-DD' format
- * @param startMonth {Number} 1-based month a season starts in. defaults to DEFAULT_SEASON_START_MONTH
+ * @param startMonth {Number} 1-based month a season starts in. passed to seasonStartYear() and seasonName(), which use
+ *   DEFAULT_SEASON_START_MONTH if it's missing or invalid
  * @returns {String} the name of the season `dateStr` falls in, e.g., '2022-2023'
  */
 function seasonNameForDate(dateStr, startMonth) {
@@ -188,7 +193,8 @@ function seasonNameForDate(dateStr, startMonth) {
 
 /**
  * @param startYear {Number} a season's starting year, ala seasonStartYear()
- * @param startMonth {Number} 1-based month a season starts in. defaults to DEFAULT_SEASON_START_MONTH
+ * @param startMonth {Number} 1-based month a season starts in. DEFAULT_SEASON_START_MONTH is used if it's missing
+ *   or invalid - see _validStartMonth()
  * @returns {Array} that season's full extent as two 'YYYY-MM-DD' dates: [the first of `startMonth`, the day before the
  *   first of `startMonth` in the following year]. e.g., 2022 with the default August start -> ['2022-08-01',
  *   '2023-07-31'], and 2022 with a January start -> ['2022-01-01', '2022-12-31']
@@ -204,7 +210,8 @@ function seasonDateRange(startYear, startMonth) {
 
 /**
  * @param dateStrs {Array} dates in 'YYYY-MM-DD' format. need not be sorted or unique
- * @param startMonth {Number} 1-based month a season starts in. defaults to DEFAULT_SEASON_START_MONTH
+ * @param startMonth {Number} 1-based month a season starts in. passed to seasonStartYear(), which uses
+ *   DEFAULT_SEASON_START_MONTH if it's missing or invalid
  * @returns {Array} the starting years (Numbers) of the seasons that `dateStrs` falls in, without duplicates and in
  *   ascending order. [] if `dateStrs` is empty or not an Array
  */
@@ -236,7 +243,8 @@ function shiftDateStrByYears(dateStr, numYears) {
  * Splits truth data into one chunk per season (see seasonStartYear()).
  *
  * @param truthData {Object} truth data ala _fetchData()'s truth format: {date: [...], y: [...]}
- * @param startMonth {Number} 1-based month a season starts in. defaults to DEFAULT_SEASON_START_MONTH
+ * @param startMonth {Number} 1-based month a season starts in. passed to seasonStartYear() and seasonName(), which use
+ *   DEFAULT_SEASON_START_MONTH if it's missing or invalid
  * @returns {Array} one object per season present in `truthData`, in ascending season order, each of the form
  *   {season: '2022-2023', startYear: 2022, date: [...], y: [...]}. [] if there is no data
  */
@@ -267,7 +275,8 @@ function splitTruthBySeason(truthData, startMonth) {
  *
  * @param truthData {Object} truth data ala _fetchData()'s truth format: {date: [...], y: [...]}
  * @param startYear {Number} a season's starting year, ala seasonStartYear()
- * @param startMonth {Number} 1-based month a season starts in. defaults to DEFAULT_SEASON_START_MONTH
+ * @param startMonth {Number} 1-based month a season starts in. passed to seasonStartYear(), which uses
+ *   DEFAULT_SEASON_START_MONTH if it's missing or invalid
  * @returns {Object} {date: [...], y: [...]} in the same order as `truthData`. Empty arrays if nothing matches
  */
 function filterTruthToSeason(truthData, startYear, startMonth) {
