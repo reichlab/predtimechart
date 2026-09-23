@@ -532,6 +532,42 @@ test('the xaxis range is the selected season, not the caller\'s initial_xaxis_ra
 });
 
 
+test('an initial_xaxis_range within the season is honored on the first plot', assert => {
+    // ala a copied URL whose `xaxis_range` is a zoom within the season
+    const relayoutUpdate = relayoutUpdateForTruth(true, ['2021-11-01', '2022-02-15'], null);
+    assert.deepEqual(relayoutUpdate['xaxis.range'], ['2021-11-01', '2022-02-15']);
+    assert.equal(App.state.plotted_season_start_year, 2021, 'the plotted season is remembered');
+});
+
+
+test('an initial_xaxis_range within the season is not re-applied once the plot is drawn', assert => {
+    // ala turning season mode on later, after the initial plot. the caller's range only applies to the first plot
+    initializeShowingSeason(['2021-11-01', '2022-02-15']);
+    App.state.plotted_season_start_year = null;  // ala not in season mode for the previous plot
+    const relayoutUpdate = relayoutUpdateFor(true, {xaxis: {range: ['2019-12-01', '2022-01-29']}, yaxis: {range: [0, 50]}});
+    assert.deepEqual(relayoutUpdate['xaxis.range'], ['2021-08-01', '2022-07-31']);
+});
+
+
+test('an initial_yaxis_range is honored on the first plot in season mode', assert => {
+    // ala a copied URL's `yaxis_range`
+    const error = App.initialize('qunit-fixture', function (...args) {
+    }, true, structuredClone(testOptions));
+    if (error) {
+        throw `initialize() failed: ${error}`;
+    }
+
+    App.state.current_truth = threeSeasonTruth();
+    App.state.as_of_truth = [];
+    App.state.forecasts = {};
+    App.state.is_season_mode = true;
+    App.state.initial_yaxis_range = [5, 45];
+    const relayoutUpdate = relayoutUpdateFor(true);  // ala initialize()'s fetchDataUpdatePlot(true, true)
+    assert.deepEqual(relayoutUpdate['xaxis.range'], ['2021-08-01', '2022-07-31']);
+    assert.deepEqual(relayoutUpdate['yaxis.range'], [5, 45]);
+});
+
+
 test('the xaxis range is not re-forced while the season stays the same', assert => {
     // ala already showing this season, possibly zoomed
     const relayoutUpdate = relayoutUpdateForTruth(true, null, 2021);

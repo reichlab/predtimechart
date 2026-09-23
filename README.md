@@ -379,6 +379,10 @@ mean a non-default "Season start" isn't captured by a URL copied while season mo
 If `as_of` and `season` disagree - only possible in a hand-edited URL - `as_of` wins and the season is derived from
 it. A `season` given without an `as_of` wins instead, moving to that season's first available "as of" date.
 
+In season mode, an `xaxis_range` is only honored if it falls within the season - a zoom within it, typically, from a
+copied URL. One that reaches outside the season, such as a multi-season `initial_xaxis_range` meant for when season
+mode is off, is ignored in favor of the season's extent. `yaxis_range` is honored either way.
+
 
 ## Jump to as_of date
 

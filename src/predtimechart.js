@@ -1122,9 +1122,19 @@ const App = {
         this.state.plotted_season_start_year = refStartYear;
 
         if (isNewSeason && (refStartYear !== null)) {
-            relayoutUpdate['xaxis.range'] = seasonDateRange(refStartYear, this.state.season_start_month);
+            // the season's extent, except on the first plot when the caller's `initial_xaxis_range` falls within it -
+            // typically a zoom within the season, from a copied URL. NB: a range reaching outside the season (a
+            // multi-season window, say) is ignored, since the season owns the xaxis. ok to compare 'YYYY-MM-DD's as
+            // strings
+            const seasonRange = seasonDateRange(refStartYear, this.state.season_start_month);
+            const initialXRange = this.state.initial_xaxis_range;
+            const isInitialXRangeInSeason = !isExistingData && (initialXRange != null)
+                && (initialXRange[0] >= seasonRange[0]) && (initialXRange[1] <= seasonRange[1]);
+            relayoutUpdate['xaxis.range'] = isInitialXRangeInSeason ? initialXRange : seasonRange;
             if (!isResetYLimit && isExistingData && !isYAxisRangeDefault) {
                 relayoutUpdate['yaxis.range'] = currYAxisRange;
+            } else if (!isExistingData && (this.state.initial_yaxis_range != null)) {
+                relayoutUpdate['yaxis.range'] = this.state.initial_yaxis_range;  // ala the first plot outside season mode
             }
         } else if (isExistingData) {
             // above plotyDiv.layout.* is NOT undefined -> can use currXAxisRange, ...
