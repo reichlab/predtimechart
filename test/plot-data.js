@@ -459,22 +459,50 @@ test('as of data is not trimmed, and keeps its old name, when not in season mode
 QUnit.module('season mode: xaxis range');
 
 
-// calls App.updatePlot() with Plotly.relayout() captured, and returns the update it was passed
-function relayoutUpdateFor(isResetYLimit) {
+/**
+ * Sets up #ploty_div ala Plotly either before the first plot or with a plot already drawn.
+ *
+ * @param existingLayout {Object} null for before the first plot. o/w the layout of the plot already drawn, e.g.,
+ *   {xaxis: {range: [...]}, yaxis: {range: [...]}}
+ */
+function setPlotyDiv(existingLayout) {
     const plotyDiv = document.getElementById('ploty_div');
-    plotyDiv.data = [];  // ala Plotly before the first plot
+    if (existingLayout === null) {
+        plotyDiv.data = [];
+    } else {
+        plotyDiv.data = [{}];  // only its length matters
+        plotyDiv.layout = existingLayout;
+    }
+}
 
+
+// runs `fcn` with Plotly.relayout() captured, and returns the update it was last passed
+function captureRelayoutUpdate(fcn) {
     let relayoutUpdate = null;
     const origRelayout = Plotly.relayout;
     Plotly.relayout = function (graphDiv, update) {
         relayoutUpdate = update;
     };
     try {
-        App.updatePlot(isResetYLimit);
+        fcn();
     } finally {
         Plotly.relayout = origRelayout;
     }
     return relayoutUpdate;
+}
+
+
+// calls App.updatePlot() with Plotly.relayout() captured, and returns the update it was passed. `existingLayout` is
+// ala setPlotyDiv()
+function relayoutUpdateFor(isResetYLimit, existingLayout = null) {
+    setPlotyDiv(existingLayout);
+    return captureRelayoutUpdate(() => App.updatePlot(isResetYLimit));
+}
+
+
+// a plot already drawn, showing the 2021-2022 season (ala the xaxis range updatePlot() sets for it)
+function seasonPlotLayout() {
+    return {xaxis: {range: ['2021-08-01', '2022-07-31']}, yaxis: {range: [0, 50]}};
 }
 
 
@@ -515,6 +543,52 @@ test('the caller\'s initial_xaxis_range wins when not in season mode', assert =>
     const relayoutUpdate = relayoutUpdateForTruth(false, ['2019-09-01', '2022-07-01'], null);
     assert.deepEqual(relayoutUpdate['xaxis.range'], ['2019-09-01', '2022-07-01']);
     assert.equal(App.state.plotted_season_start_year, null, 'no season is plotted');
+});
+
+
+// initializes App in season mode showing the 2021-2022 season, ala after a first updatePlot()
+function initializeShowingSeason(initialXAxisRange) {
+    const error = App.initialize('qunit-fixture', function (...args) {
+    }, true, {...structuredClone(testOptions), initial_season_mode: true});
+    if (error) {
+        throw `initialize() failed: ${error}`;
+    }
+
+    App.state.current_truth = threeSeasonTruth();
+    App.state.as_of_truth = [];
+    App.state.forecasts = {};
+    App.state.initial_xaxis_range = initialXAxisRange;
+    App.state.plotted_season_start_year = 2021;
+}
+
+
+test('turning season mode off releases the season\'s xaxis range', assert => {
+    initializeShowingSeason(null);
+    setPlotyDiv(seasonPlotLayout());
+    const relayoutUpdate = captureRelayoutUpdate(() =>
+        $('#forecastViz_season_mode').prop('checked', false).trigger('change'));
+    assert.equal(relayoutUpdate.hasOwnProperty('xaxis.range'), false, 'the season\'s range is not re-applied');
+    assert.equal(relayoutUpdate['xaxis.autorange'], true, 'the xaxis fits all the data again');
+    assert.equal(App.state.plotted_season_start_year, null, 'no season is plotted');
+});
+
+
+test('turning season mode off restores the caller\'s initial_xaxis_range', assert => {
+    initializeShowingSeason(['2019-09-01', '2022-07-01']);
+    setPlotyDiv(seasonPlotLayout());
+    const relayoutUpdate = captureRelayoutUpdate(() =>
+        $('#forecastViz_season_mode').prop('checked', false).trigger('change'));
+    assert.deepEqual(relayoutUpdate['xaxis.range'], ['2019-09-01', '2022-07-01']);
+});
+
+
+test('a zoom is kept on replots outside season mode', assert => {
+    // guards the isLeavingSeason check against releasing a zoom when no season was plotted to begin with
+    relayoutUpdateForTruth(false, null, null);  // initialize, not in season mode
+    const zoomedLayout = {xaxis: {range: ['2020-10-01', '2021-03-01']}, yaxis: {range: [0, 50]}};
+    const relayoutUpdate = relayoutUpdateFor(false, zoomedLayout);
+    assert.deepEqual(relayoutUpdate['xaxis.range'], ['2020-10-01', '2021-03-01']);
+    assert.equal(relayoutUpdate.hasOwnProperty('xaxis.autorange'), false);
 });
 
 

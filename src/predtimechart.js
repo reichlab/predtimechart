@@ -763,8 +763,9 @@ const App = {
         // "Season mode (beta)" checkbox. NB: no fetch is needed - season mode is purely a matter of how the data
         // we already have is plotted
         $("#forecastViz_season_mode").change(function () {
+            // NB: we leave `plotted_season_start_year` alone so that updatePlot() can tell a season going away (off)
+            // from one arriving (on), and set the xaxis range accordingly
             App.state.is_season_mode = $(this).prop('checked');
-            App.state.plotted_season_start_year = null;  // so updatePlot() re-applies (or releases) the xaxis range
             App.syncSelectedSeason();
             App.updateSeasonModeUI();
             App.updatePlot(true);
@@ -795,7 +796,8 @@ const App = {
         // "Season start" select. changing it moves the season boundaries, so the season list has to be rebuilt
         $('#season_start').on('change', function () {
             App.state.season_start_month = parseInt(this.value);
-            App.state.plotted_season_start_year = null;  // ""
+            // the season's start year can stay the same while its extent moves, so force updatePlot() to re-apply it
+            App.state.plotted_season_start_year = null;
             App.syncSelectedSeason();
             App.updatePlot(true);
             App.showOptionsInURL();
@@ -1116,6 +1118,7 @@ const App = {
         // isn't undone by every replot (selecting a model, say)
         const refStartYear = this.state.is_season_mode ? this.referenceSeasonStartYear() : null;
         const isNewSeason = refStartYear !== this.state.plotted_season_start_year;
+        const isLeavingSeason = isNewSeason && (refStartYear === null);  // a season was plotted, but none is now
         this.state.plotted_season_start_year = refStartYear;
 
         if (isNewSeason && (refStartYear !== null)) {
@@ -1125,10 +1128,13 @@ const App = {
             }
         } else if (isExistingData) {
             // above plotyDiv.layout.* is NOT undefined -> can use currXAxisRange, ...
-            if (!isXAxisRangeDefault) {
+            // NB: when leaving season mode, currXAxisRange is the season's, which we set above - not a zoom to keep
+            if (!isXAxisRangeDefault && !isLeavingSeason) {
                 relayoutUpdate['xaxis.range'] = currXAxisRange;
             } else if (this.state.initial_xaxis_range != null) {
                 relayoutUpdate['xaxis.range'] = this.state.initial_xaxis_range;
+            } else if (isLeavingSeason) {
+                relayoutUpdate['xaxis.autorange'] = true;
             }
 
             if (!isResetYLimit) {
