@@ -1131,9 +1131,11 @@ const App = {
             const isInitialXRangeInSeason = !isExistingData && (initialXRange != null)
                 && (initialXRange[0] >= seasonRange[0]) && (initialXRange[1] <= seasonRange[1]);
             relayoutUpdate['xaxis.range'] = isInitialXRangeInSeason ? initialXRange : seasonRange;
-            if (!isResetYLimit && isExistingData && !isYAxisRangeDefault) {
-                relayoutUpdate['yaxis.range'] = currYAxisRange;
-            } else if (!isExistingData && (this.state.initial_yaxis_range != null)) {
+
+            // NB: we never keep the current yaxis range here, even if `!isResetYLimit`. that's the Season <SELECT>'s
+            // case - it doesn't refetch current truth - and a y range suited to one season's values can cut off
+            // another's. the other ways to get a new season reset y anyway
+            if (!isExistingData && (this.state.initial_yaxis_range != null)) {
                 relayoutUpdate['yaxis.range'] = this.state.initial_yaxis_range;  // ala the first plot outside season mode
             }
         } else if (isExistingData) {

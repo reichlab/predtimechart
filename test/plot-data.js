@@ -452,11 +452,11 @@ test('as of data is not trimmed, and keeps its old name, when not in season mode
 
 
 //
-// xaxis range tests: in season mode the selected season owns the xaxis, so that there's no blank room left for other
-// seasons
+// axis range tests: in season mode the selected season owns the xaxis, so that there's no blank room left for other
+// seasons, and each new season gets its own yaxis range
 //
 
-QUnit.module('season mode: xaxis range');
+QUnit.module('season mode: axis ranges');
 
 
 /**
@@ -565,6 +565,26 @@ test('an initial_yaxis_range is honored on the first plot in season mode', asser
     const relayoutUpdate = relayoutUpdateFor(true);  // ala initialize()'s fetchDataUpdatePlot(true, true)
     assert.deepEqual(relayoutUpdate['xaxis.range'], ['2021-08-01', '2022-07-31']);
     assert.deepEqual(relayoutUpdate['yaxis.range'], [5, 45]);
+});
+
+
+test('a new season gets its own yaxis range', assert => {
+    // ala picking 2021-2022 from the Season <SELECT> while showing 2020-2021, which calls
+    // fetchDataUpdatePlot(true, false) and therefore updatePlot(false)
+    initializeShowingSeason(null);
+    App.state.plotted_season_start_year = 2020;
+    const prevSeasonLayout = {xaxis: {range: ['2020-08-01', '2021-07-31']}, yaxis: {range: [0, 25]}};
+    const relayoutUpdate = relayoutUpdateFor(false, prevSeasonLayout);
+    assert.deepEqual(relayoutUpdate['xaxis.range'], ['2021-08-01', '2022-07-31']);
+    assert.equal(relayoutUpdate.hasOwnProperty('yaxis.range'), false, 'the previous season\'s y range is not kept');
+});
+
+
+test('the yaxis range is kept while the season stays the same', assert => {
+    // ala moving to another as_of date within the season, which calls fetchDataUpdatePlot(true, false)
+    initializeShowingSeason(null);
+    const relayoutUpdate = relayoutUpdateFor(false, seasonPlotLayout());
+    assert.deepEqual(relayoutUpdate['yaxis.range'], [0, 50]);
 });
 
 
