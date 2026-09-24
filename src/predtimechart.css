@@ -10,8 +10,75 @@
     display: inline-block;
 }
 
+/* the options panel: 14px throughout so that the dropdowns, their labels, the section headers, and the model list
+   below them are all one size. NB: .forecastViz_label was referenced but never defined, which left the "Season mode
+   (beta)" and "Select Models" headers at the browser default while everything around them was smaller */
+#forecastViz_options {
+    font-size: 14px;
+}
+
+/* the options panel's section headers: "Season mode (beta)", "Select Target Data", and "Select Models" */
+.forecastViz_label {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Each section of the options panel, set off from the one above it by a rule. NB: the rule goes on the section
+   rather than on its header, because two of the three headers are <LABEL>s inside a flex row (they have a checkbox
+   beside them), where a border would span only the text. The color is a neutral translucent gray rather than a
+   fixed one so that it reads correctly on light and dark host themes alike - consumers supply their own */
+.forecastViz_section {
+    border-top: 1px solid rgba(128, 128, 128, 0.35);
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* The options-panel dropdowns and their labels, side by side ("Outcome: [ ... ]") rather than stacked. The form is
+   one two-column grid - `display: contents` lets each row's label and select be its items - so that the label
+   column is exactly as wide as the longest label and every select starts at the same x. Sizing the labels
+   individually instead would either misalign the selects or, with a fixed width, spend panel width on padding that
+   the dropdowns need: the selected outcome can be a long name, and the panel is narrow to begin with.
+
+   NB: deliberately self-contained rather than built on Bootstrap's grid - consumers embed us in pages whose
+   Bootstrap build has the form styles but not the grid (a Quarto site, say), where `row`/`col-sm-*` silently do
+   nothing and each label lands back above its dropdown */
+.forecastViz_form {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+}
+
+.forecastViz_form_row {
+    display: contents;
+}
+
+.forecastViz_form_row > label {
+    margin-bottom: 0;
+}
+
+.forecastViz_form_row > select {
+    min-width: 0;  /* o/w a long option name pushes the select past the panel */
+}
+
+/* too narrow to sit side by side - stack, ala before */
+@media (max-width: 575.98px) {
+    .forecastViz_form {
+        display: block;
+    }
+
+    .forecastViz_form_row > select {
+        width: 100%;
+    }
+}
+
 .forecastViz_select_data {
     font-size: 14px;
+}
+
+/* clicking a target data checkbox's text toggles it, ala the model list, so show the text as clickable */
+.forecastViz_select_data label {
+    cursor: pointer;
 }
 
 #forecastViz_select_model {

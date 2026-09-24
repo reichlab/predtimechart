@@ -105,6 +105,9 @@ The component is initialized by a JavaScript object with the following keys and 
 - `initial_as_of`: `string` specifying the initial date from 'available_as_ofs' (in 'YYYY-MM-DD' format) to use for the initially-selected _as_of_ date
 - `initial_checked_models`: `models` value(s) to use for the initial plot
 - `initial_interval`: `intervals` value to use for the initial plot
+- `initial_season`: `integer` specifying the season to plot initially, identified by the calendar year the season starts in - e.g., `2024` for the '2024-2025' season with the default August start. Only applies when `initial_season_mode` is true, and must be a season that the initial target variable's `available_as_ofs` dates fall in. Selecting it moves the initial "as of" date to that season's first available one. See "Season mode (beta)" below
+- `initial_season_mode`: `boolean` specifying whether season mode starts out on. Defaults to `false`
+- `initial_season_start_month`: `integer` from 1 (January) through 12 (December) specifying the month a season starts in. Defaults to 8 (August)
 - `initial_target_var`: `target_variables` `value` key to use for the initial plot
 - `initial_task_ids`:  an `object` to use for the initial plot. Its format is identical to `_fetchData()`'s `taskIDs` arg above.
 - `initial_xaxis_range`: `array` of two dates in 'YYYY-MM-DD' format that specify the initial xaxis range to use. To not initialize the range, pass `null` for its value
@@ -277,6 +280,108 @@ We use [webpack](https://webpack.js.org/) to package up all dependencies into a 
 # Overall usage and features
 
 TBC
+
+
+## Options panel layout
+
+The options panel's dropdowns put their label and `<SELECT>` on one line (`Outcome: [ ... ]`) rather than stacking
+them, and the whole panel is set at 14px so that the dropdowns, their labels, the section headers, and the model list
+are all one size. This matters most in season mode, which adds two more dropdowns to the panel.
+
+The panel is divided into sections - "Season mode (beta)", "Select Target Data", and "Select Models" - each with a
+bold header and a hairline rule above it. The first rule also sets off the Outcome/task ID/Interval dropdowns at the
+top, which have no header of their own. The rule's color is a translucent gray rather than a fixed one so that it
+reads correctly against whatever theme the host page uses.
+
+Each group of dropdowns is a two-column CSS grid, so the label column is exactly as wide as its longest label and
+every dropdown starts at the same x, leaving the rest of the panel's width to the dropdowns themselves. That matters
+because the panel is narrow and an outcome variable's name can be long.
+
+The layout lives in `predtimechart.css` rather than using Bootstrap's grid, deliberately: some consumers embed the
+component in pages whose Bootstrap build ships the form styles but not the grid - a Quarto site, for instance - and
+there a `row`/`col-sm-*` layout silently does nothing, putting each label back above its dropdown. Below 576px wide
+the label and dropdown stack, as before.
+
+Note that the options and plot columns themselves are still Bootstrap's `col-md-3` and `col-md-9`. Consumers whose
+pages lack the Bootstrap grid map those to their own layout - the Quarto dashboards do it by reading the number out
+of the class name - so `col-md-N` needs to stay the first class on those two `<DIV>`s.
+
+
+## Season mode (beta)
+
+By default the plot shows all the target data going back as far as the data reaches. Checking the **Season mode
+(beta)** checkbox in the options panel instead focuses the plot on a single season, with the other seasons drawn in
+light gray behind it, ala the old FluSight Network site. Two dropdowns appear below the checkbox when it's checked:
+
+- **Season**: the season to plot. The choices are the seasons that the current target variable's `available_as_ofs`
+  dates fall in, so every season offered is one you can navigate within. Selecting a season moves the "as of" date to
+  that season's first available one, so you start at the top of the season and can walk forward through it. (The
+  initial page load is different: it stays on the caller's `initial_as_of`, which is typically the most recent
+  forecast of the most recent season.)
+- **Season start**: the month a season starts in - a season runs from the first of that month through the day before
+  the first of that month in the following year. The default is August. Picking January makes a season a single
+  calendar year, which is also how it's named (`2025` rather than `2025-2026`).
+
+Season mode also changes the "Select Target Data" checkboxes:
+
+| Checkbox                        | Meaning                                                                       |
+|---------------------------------|-------------------------------------------------------------------------------|
+| Selected season, as of data     | a vintage of target data as of the selected/navigated-to date (black)          |
+| Selected season, current data   | target data from the most recent vintage for the selected season (dark gray)   |
+| Other seasons, current data     | the most recent vintage from the other seasons, overlaid (light gray)          |
+
+The last one only applies in season mode and is therefore hidden when it's off. The other seasons' dates are shifted by
+whole years so that they line up with the selected season, and their tooltips are just the season's name. Both earlier
+and later seasons are shown, so selecting an older season still shows the ones that followed it.
+
+While in season mode, the left/right arrow keys and the `<` / `>` buttons stop at the selected season's first and last
+"as of" dates - the buttons are disabled there - rather than crossing into the neighboring season. The plot's x-axis is
+also pinned to the selected season's extent, though you can still zoom and pan within it, and the range slider below
+the plot is drawn at about half its usual height, since a one-season-wide plot doesn't need it to navigate a long time
+series. Turning season mode off restores all of the above to the way the component behaves without it.
+
+### Configuring season mode
+
+Season mode is off by default, with August as the season start, and can be configured two ways:
+
+- through the options object, via `initial_season_mode`, `initial_season`, and `initial_season_start_month`
+- through the URL, via the `season_mode`, `season`, and `season_start` search params documented under "URL
+  parameters" below
+
+Either way, `initial_season`/`season` only applies when season mode is on - there's no season to be in when it's off.
+
+
+## URL parameters
+
+The app's shareable state is kept in the page's URL search params, which are rewritten as you interact with the
+component. Copying the URL and opening it elsewhere reproduces what you were looking at. The params:
+
+| Param                    | Maps to the option      | Notes                                                           |
+|--------------------------|-------------------------|-----------------------------------------------------------------|
+| `as_of`                  | `initial_as_of`         | 'YYYY-MM-DD'                                                     |
+| `interval`               | `initial_interval`      |                                                                  |
+| `target_var`             | `initial_target_var`    |                                                                  |
+| `model`                  | `initial_checked_models`| repeatable - one per checked model                               |
+| `xaxis_range`            | `initial_xaxis_range`   | repeated twice: start and end                                    |
+| `yaxis_range`            | `initial_yaxis_range`   | ""                                                               |
+| any `task_ids` key       | `initial_task_ids`      | e.g., `location=NYC`                                             |
+| `season_mode`            | `initial_season_mode`   | `true` or `false`                                                |
+| `season`                 | `initial_season`        | the season's start year, e.g., `2024`                            |
+| `season_start`           | `initial_season_start_month` | 1 through 12                                                |
+
+URL params override the options object's values. The merged result is validated against `src/schema.json`, and if
+anything is invalid the whole set is ignored, a dialog says so, and the URL is rewritten to the state actually in
+use.
+
+The three season params are only written to the URL while season mode is on, since off is the default - which does
+mean a non-default "Season start" isn't captured by a URL copied while season mode is off.
+
+If `as_of` and `season` disagree - only possible in a hand-edited URL - `as_of` wins and the season is derived from
+it. A `season` given without an `as_of` wins instead, moving to that season's first available "as of" date.
+
+In season mode, an `xaxis_range` is only honored if it falls within the season - a zoom within it, typically, from a
+copied URL. One that reaches outside the season, such as a multi-season `initial_xaxis_range` meant for when season
+mode is off, is ignored in favor of the season's extent. `yaxis_range` is honored either way.
 
 
 ## Jump to as_of date

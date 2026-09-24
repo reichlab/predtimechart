@@ -1,4 +1,5 @@
 import validate from './schema-validator.cjs'; // Ajs standalone validation code
+import {DEFAULT_SEASON_START_MONTH, seasonsInDates} from './utils.js';
 
 
 //
@@ -104,6 +105,17 @@ function _validateOptions(options) {
     const initialTargetVarAvailAsOfs = availableAsOfs[initialTargetVar];
     if (!initialTargetVarAvailAsOfs.includes(initialAsOf)) {
         throw `initial_as_of not in available_as_ofs: ${initialAsOf}`;
+    }
+
+    // case: initial_season in the seasons that available_as_ofs spans. NB: this test must come after the
+    // "initial_target_var in target_variables values" test b/c here we depend on initial_target_var being valid
+    if (options.hasOwnProperty('initial_season')) {
+        const seasonStartMonth = options.hasOwnProperty('initial_season_start_month')
+            ? options['initial_season_start_month'] : DEFAULT_SEASON_START_MONTH;
+        const availSeasons = seasonsInDates(initialTargetVarAvailAsOfs, seasonStartMonth);
+        if (!availSeasons.includes(options['initial_season'])) {
+            throw `initial_season not in available_as_ofs seasons: ${options['initial_season']}, availSeasons=${availSeasons}`;
+        }
     }
 
     // case: initial_task_ids key in task_ids
