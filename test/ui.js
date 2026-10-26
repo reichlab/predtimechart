@@ -173,6 +173,39 @@ test('selectedTaskIDs() and selectedTaskIDValues() are correct', assert => {
 });
 
 
+test('changing the target variable keeps the task ID selections where possible', assert => {
+    // NB: the second target variable has no Texas, so it tests the fallback to the first option
+    const optionsCopy = structuredClone(covid19ForecastsVizTestOptions);
+    optionsCopy['available_as_ofs']['week_ahead_incident_cases'] = ["2022-01-22", "2022-01-29"];
+    optionsCopy['available_as_ofs']['week_ahead_incident_hosps'] = ["2022-01-22", "2022-01-29"];
+    optionsCopy['target_variables'] = [
+        {"value": "week_ahead_incident_deaths", "text": "deaths", "plot_text": "deaths"},
+        {"value": "week_ahead_incident_cases", "text": "cases", "plot_text": "cases"},
+        {"value": "week_ahead_incident_hosps", "text": "hosps", "plot_text": "hosps"},
+    ];
+    const locations = [{"value": "US", "text": "US"}, {"value": "25", "text": "Massachusetts"},
+        {"value": "48", "text": "Texas"}];
+    optionsCopy['task_ids'] = {
+        "week_ahead_incident_deaths": {"unit": locations},
+        "week_ahead_incident_cases": {"unit": locations},
+        "week_ahead_incident_hosps": {"unit": locations.slice(0, 2)},  // no Texas
+    };
+    optionsCopy['initial_task_ids'] = {"unit": "48"};
+    assert.equal(App.initialize('qunit-fixture', _fetchData, true, optionsCopy), null, 'the options are valid');
+
+    // case: the new target variable has the selected location
+    $("#unit").val('25').trigger('change');
+    $("#target_variable").val('week_ahead_incident_cases').trigger('change');
+    assert.equal(App.state.selected_target_var, 'week_ahead_incident_cases');
+    assert.deepEqual(App.selectedTaskIDValues(), {"unit": "25"}, 'Massachusetts is kept');
+
+    // case: the new target variable lacks the selected location
+    $("#unit").val('48').trigger('change');
+    $("#target_variable").val('week_ahead_incident_hosps').trigger('change');
+    assert.deepEqual(App.selectedTaskIDValues(), {"unit": "US"}, 'falls back to the first option');
+});
+
+
 //
 // optional disclaimer tests
 //

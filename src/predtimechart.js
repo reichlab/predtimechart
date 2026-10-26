@@ -741,9 +741,11 @@ const App = {
     addEventHandlers() {
         // option, task ID, and interval selects
         $('#target_variable').on('change', function () {
+            // keep the task ID selections where the new target variable has them, e.g., the selected location. NB: we
+            // read them before changing `selected_target_var` b/c selectedTaskIDValues() looks them up in its task IDs
+            const selectedTaskIdValues = App.selectedTaskIDValues();
             App.state.selected_target_var = this.value;
-            App.initializeTaskIDsUI(App.state.task_ids, App.state.selected_target_var,
-                App.state.task_ids[App.state.selected_target_var]);
+            App.initializeTaskIDsUI(App.state.task_ids, App.state.selected_target_var, selectedTaskIdValues);
             App.syncSelectedSeason();  // b/c `available_as_ofs` - and therefore the seasons - is per target variable
             App.fetchDataUpdatePlot(true, true);
             App.showOptionsInURL();
