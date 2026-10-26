@@ -55,8 +55,9 @@ In your HTML file, load the required CSS and JavaScript files:
 
 ```html
 <script type="module">
-    // import the module's entry point (the `App` object)
-    import App from 'https://cdn.jsdelivr.net/gh/reichlab/predtimechart@2.0.9/dist/predtimechart.js';
+    // import the module's entry point (the `App` object). replace vX.Y.Z with a release tag, e.g., the latest one at
+    // https://github.com/reichlab/predtimechart/releases
+    import App from 'https://cdn.jsdelivr.net/gh/reichlab/predtimechart@vX.Y.Z/dist/predtimechart.bundle.js';
 
     // set up _fetchData and options
     function _fetchData(isForecast, targetKey, taskIDs, referenceDate) { ... }
@@ -239,7 +240,16 @@ Forecast data is an `object` with one entry for each model in the options object
 
 # Development
 
-Following is how to do development-related activities. You must first install the required Node.js packages via `npm install --save-dev`.
+Following is how to do development-related activities. You must first install the required Node.js packages via:
+
+```bash
+npm ci
+```
+
+`npm ci` installs the exact versions pinned in `package-lock.json` and fails if the lockfile has drifted from `package.json`. Prefer it over `npm install`, which is free to resolve newer versions than the lockfile pins, silently leaving you building with a different toolchain than everyone else.
+
+> [!IMPORTANT]
+> Re-run `npm ci` whenever `package-lock.json` changes underneath you - after a `git pull`, a merge from `master`, a dependency bump, or a branch switch. A stale `node_modules` is the usual cause of committed bundles that don't reproduce (see [Rebuilding the bundle](#rebuilding-the-bundle)).
 
 
 ## Running unit tests
@@ -274,7 +284,29 @@ We use [Ajv](https://ajv.js.org/) to validate `App.initialize()`'s `options` obj
 
 ## Packaging the component
 
-We use [webpack](https://webpack.js.org/) to package up all dependencies into a single `dist/predtimechart.bundle.js` file for end users. To do so, execute the `package.json` `build` script via `npm run build`, which will update all files in `dist/`.
+We use [webpack](https://webpack.js.org/) to package up all dependencies into a single `dist/predtimechart.bundle.js` file for end users. The `package.json` `build` script (`npm run build`) regenerates all files in `dist/`. End users load the bundle from a release tag via jsDelivr, so the committed bundle must be rebuilt whenever `src/` changes.
+
+
+## Rebuilding the bundle
+
+Whenever a change to `src/` is going into a commit, rebuild the bundle from the pinned toolchain:
+
+```bash
+npm ci && npm run build
+git status   # the bundle should be the only unexpected change
+```
+
+The leading `npm ci` is the part that's easy to skip and matters most. Building against a `node_modules` that is newer or older than `package-lock.json` produces a bundle that nobody else can reproduce - webpack's output itself changes between versions - so the committed bundle stops matching what the branch plus the lockfile actually build, and every later bundle diff is noise.
+
+> Note: `npm run build` alone is fine for iterating in the browser (see [Trying the app locally](#trying-the-app-locally)) - editing `src/` doesn't change any dependency. Use the longer sequence above when the bundle is going into a commit.
+
+
+## Creating a release
+
+End users load the bundle from a Git tag via [jsDelivr](https://www.jsdelivr.com/), e.g., `https://cdn.jsdelivr.net/gh/reichlab/predtimechart@vX.Y.Z/dist/predtimechart.bundle.js`, so a release is just a tag on a `master` commit whose committed bundle is up to date. To create one:
+
+1. **Set the version in the last PR before the release.** Decide `X.Y.Z` from everything that landed since the last tag, per [SemVer](https://semver.org/) (patch for fixes, minor for new features, major for breaking changes to the `options` object or `_fetchData()` API), and set it in `package.json` and `package-lock.json` via `npm version X.Y.Z --no-git-tag-version`. The PR's bundle will already have been rebuilt per [Rebuilding the bundle](#rebuilding-the-bundle).
+2. **Create the GitHub release** once that PR is merged: on [Releases](https://github.com/reichlab/predtimechart/releases), create a new tag `vX.Y.Z` on `master`, title it `release-vX.Y.Z`, and generate the release notes. The release is then available via jsDelivr.
 
 
 # Overall usage and features
