@@ -1224,7 +1224,10 @@ const App = {
      * getPlotlyData() helper that returns the "Other seasons, current data" curves: one light gray line per season in
      * `state.current_truth` other than the one currently being viewed, with each one's dates shifted by whole years so
      * that it overlays the selected season. Both earlier and later seasons are included, so selecting an old season
-     * still shows the ones that followed it. Each trace's tooltip is just its season name, e.g., '2022-2023'.
+     * still shows the ones that followed it. Each trace's tooltip shows its season name, e.g., '2022-2023', and the
+     * hovered point's date and value. NB: the tooltip's date is the original (unshifted) one, which we pass via
+     * `customdata` b/c `x` holds the shifted dates. Plotly formats it via the hovertemplate's `|%b %-d, %Y`, which
+     * matches how it formats the other truth traces' `%{x}` dates, e.g., 'Oct 3, 2022'.
      *
      * @returns {Array} Plotly traces, oldest season first. [] if not in season mode, if the "Other seasons, current
      *   data" checkbox is unchecked, or if there's no other season's truth data
@@ -1247,7 +1250,11 @@ const App = {
                     mode: 'lines',
                     name: seasonChunk.season,
                     line: {color: 'lightgray', width: 1},
-                    hovertemplate: `<b>${seasonChunk.season}</b><extra></extra>`
+                    customdata: seasonChunk.date,  // original (unshifted) dates, for the tooltip
+                    hovertemplate: `<b>${seasonChunk.season}</b><br>` +
+                        `Date: %{customdata|%b %-d, %Y}<br>` +
+                        `Value: %{y:,.2~f}` +
+                        `<extra></extra>`
                 };
             });
     },
