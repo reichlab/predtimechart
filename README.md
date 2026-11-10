@@ -301,12 +301,37 @@ The leading `npm ci` is the part that's easy to skip and matters most. Building 
 > Note: `npm run build` alone is fine for iterating in the browser (see [Trying the app locally](#trying-the-app-locally)) - editing `src/` doesn't change any dependency. Use the longer sequence above when the bundle is going into a commit.
 
 
+## Versioning
+
+We follow a `-dev` prerelease convention for the `version` field in `package.json`, ala [predevals](https://github.com/reichlab/predevals):
+
+- **Between releases**, `master` carries a `-dev` suffix on the next expected version, e.g., `3.3.3-dev` after tagging `v3.3.2`.
+- **Feature and fix PRs don't touch the version.** Leave `package.json` and `package-lock.json` on the current `-dev` value. The actual bump is decided at release time from everything that landed, so the `-dev` number is only a placeholder for the next expected release, not a promise.
+- **The release** drops `-dev`, sets the final version, and creates a matching tag. See [Creating a release](#creating-a-release).
+- **After the release**, a follow-up PR bumps to the next `-dev`.
+
+That way work in progress on `master` is always marked `-dev`, and every full version corresponds to an actual tag. A full cycle looks like:
+
+| Step              | `package.json` version  | Tag      |
+|-------------------|-------------------------|----------|
+| Release `v3.3.2`  | `3.3.2`                 | `v3.3.2` |
+| Post-release bump | `3.3.3-dev`             | -        |
+| Feature PR merges | `3.3.3-dev` (unchanged) | -        |
+| Bugfix PR merges  | `3.3.3-dev` (unchanged) | -        |
+| Release PR        | `3.4.0` (say)           | `v3.4.0` |
+| Post-release bump | `3.4.1-dev`             | -        |
+
+> Note: The `version` field isn't what end users get - they load the bundle from a tag (see below). It's a convention for developers to track the next release, so keep it in step with the tags.
+
+
 ## Creating a release
 
 End users load the bundle from a Git tag via [jsDelivr](https://www.jsdelivr.com/), e.g., `https://cdn.jsdelivr.net/gh/reichlab/predtimechart@vX.Y.Z/dist/predtimechart.bundle.js`, so a release is just a tag on a `master` commit whose committed bundle is up to date. To create one:
 
-1. **Set the version in the last PR before the release.** Decide `X.Y.Z` from everything that landed since the last tag, per [SemVer](https://semver.org/) (patch for fixes, minor for new features, major for breaking changes to the `options` object or `_fetchData()` API), and set it in `package.json` and `package-lock.json` via `npm version X.Y.Z --no-git-tag-version`. The PR's bundle will already have been rebuilt per [Rebuilding the bundle](#rebuilding-the-bundle).
-2. **Create the GitHub release** once that PR is merged: on [Releases](https://github.com/reichlab/predtimechart/releases), create a new tag `vX.Y.Z` on `master`, title it `release-vX.Y.Z`, and generate the release notes. The release is then available via jsDelivr.
+1. **Decide the version.** Pick `X.Y.Z` from everything that landed since the last tag, per [SemVer](https://semver.org/): patch for fixes, minor for new features, major for breaking changes to the `options` object or `_fetchData()` API. The `-dev` placeholder on `master` is just a starting guess - override it if what landed warrants a different bump.
+2. **Open a release PR.** On a branch off `master` named `<author>/release/vX.Y.Z` (e.g., `mc/release/v3.3.2`), set the version in `package.json` and `package-lock.json` via `npm version X.Y.Z --no-git-tag-version`. The bundle will already be up to date, since every PR that changes `src/` rebuilds it per [Rebuilding the bundle](#rebuilding-the-bundle). Get a review and merge.
+3. **Create the GitHub release** once that PR is merged: on [Releases](https://github.com/reichlab/predtimechart/releases), create a new tag `vX.Y.Z` on `master`, title it `release-vX.Y.Z`, and generate the release notes. The release is then available via jsDelivr.
+4. **Bump to the next dev version.** Open a follow-up PR on a branch named `<author>/post-release-vX.Y.Z` that sets the next patch `-dev` version via `npm version X.Y.(Z+1)-dev --no-git-tag-version`, e.g., `3.3.3-dev` after `v3.3.2`.
 
 
 # Overall usage and features
