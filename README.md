@@ -363,7 +363,8 @@ Season mode also changes the "Select Target Data" checkboxes:
 | Other seasons, current data     | the most recent vintage from the other seasons, overlaid (light gray)          |
 
 The last one only applies in season mode and is therefore hidden when it's off. The other seasons' dates are shifted by
-whole years so that they line up with the selected season, and their tooltips are just the season's name. Both earlier
+whole years so that they line up with the selected season. Their tooltips show the season's name and each point's
+original (unshifted) date and value. Both earlier
 and later seasons are shown, so selecting an older season still shows the ones that followed it.
 
 While in season mode, the left/right arrow keys and the `<` / `>` buttons stop at the selected season's first and last

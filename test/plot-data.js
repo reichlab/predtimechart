@@ -341,9 +341,17 @@ test('each season is shifted onto the selected season', assert => {
 });
 
 
-test('tooltip is the season name alone', assert => {
+test('tooltip shows the season name, original date, and value', assert => {
     const traces = seasonTraces(plotDataForTruth(threeSeasonTruth()));
-    assert.equal(traces[0]['hovertemplate'], '<b>2019-2020</b><extra></extra>');
+    assert.equal(traces[0]['hovertemplate'],
+        '<b>2019-2020</b><br>Date: %{customdata|%b %-d, %Y}<br>Value: %{y:,.2~f}<extra></extra>');
+});
+
+
+test("tooltip dates are the season's original dates, not the shifted ones", assert => {
+    const traces = seasonTraces(plotDataForTruth(threeSeasonTruth(), {startYear: 2019}));
+    assert.deepEqual(traces[1]['x'], ['2019-12-25', '2020-01-29'], 'x is shifted back by two years');
+    assert.deepEqual(traces[1]['customdata'], ['2021-12-25', '2022-01-29'], 'customdata is not shifted');
 });
 
 
